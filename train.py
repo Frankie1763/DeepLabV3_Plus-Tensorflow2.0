@@ -142,7 +142,7 @@ def make_dataset(train_img_list, train_msk_list, val_img_list, val_msk_list):
 
     return train_dataset, val_dataset
 
-def define_model(H, W, num_classes, momentum = 0.9997, epsilon = 1e-5, learning_rate = 1e-4)
+def define_model(H, W, num_classes, momentum = 0.9997, epsilon = 1e-5, learning_rate = 1e-4):
     loss = tf.losses.SparseCategoricalCrossentropy(from_logits=True)
     strategy = tf.distribute.MirroredStrategy()
     with strategy.scope():
@@ -188,6 +188,8 @@ def main():
               validation_steps=len(val_img_list) // batch_size,
               callbacks=callbacks)
 
+if __name__ == '__main__':
+    main()
 
 
 
