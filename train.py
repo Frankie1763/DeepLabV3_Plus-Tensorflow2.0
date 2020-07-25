@@ -3,6 +3,8 @@ import tensorflow as tf
 import argparse
 from tensorflow.keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping, LearningRateScheduler
 from deeplab import DeepLabV3Plus
+import keras as K
+import numpy as np
 
 print('TensorFlow', tf.__version__)
 
@@ -151,12 +153,13 @@ def weightedLoss(originalLossFunc, weightsList):  # function to set weights on l
 
         # argmax returns the index of the element with the greatest value
         # done in the class axis, it returns the class index
-        classSelectors = K.argmax(true, axis=axis)
+        classSelectors = np.argmax(true, axis=axis)
         # if your loss is sparse, use only true as classSelectors
 
         # considering weights are ordered by class, for each class
         # true(1) if the class index is equal to the weight index
         classSelectors = [K.equal(i, classSelectors) for i in range(len(weightsList))]
+
 
         # casting boolean to float for calculations
         # each tensor in the list contains 1 where ground true class is equal to its index
