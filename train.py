@@ -175,16 +175,21 @@ def define_callbacks(tb_logs_path, checkpoint_path, saving_interval=2):
 def main():
     FLAGS, unparsed = parser.parse_known_args()
     train_img_list, train_msk_list, val_img_list, val_msk_list = make_list_from_txt(FLAGS.txt_dir)
+    print("Successfully made data lists!")
     train_dataset, val_dataset = make_dataset(train_img_list, train_msk_list, val_img_list, val_msk_list)
+    print("Successfully made dataset!")
     momentum, epsilon, learning_rate = FLAGS.m, FLAGS.e, FLAGS.lr
     model = define_model(H, W, num_classes, momentum, epsilon, learning_rate)
+    print("Successfully defined the model!")
     callbacks = define_callbacks(FLAGS.tensorboard_dir, FLAGS.checkpoint_dir, FLAGS.saving_interval)
     if FLAGS.restore:  # the restore flag is not None
+        print("Restore training weights...")
         strategy = tf.distribute.MirroredStrategy()
         with strategy.scope():
             model.load_weight(FLAGS.restore)
 
     class_weights = [1]*21 + [0]  # set the weight of class 22 as 0
+    print("Start training...")
     model.fit(train_dataset,
               steps_per_epoch=len(train_img_list) // batch_size,
               epochs=FLAGS.epoch,
