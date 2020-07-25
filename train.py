@@ -9,31 +9,31 @@ print('TensorFlow', tf.__version__)
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--txt_dir', type=str,
-                    default= '/content/drive/My Drive/CS Internship/DeepLab_v3/deeplab_v3_tensorflow_v1/dataset',
+                    default='/content/drive/My Drive/CS Internship/DeepLab_v3/deeplab_v3_tensorflow_v1/dataset',
                     help='directory that contains the train, val txt files.')
 parser.add_argument('--ckpt_dir', type=str,
-                    default= "/content/drive/My Drive/CS Internship/DeepLab_v3/deeplab_v3_plus_tensorflow_v2/checkpoints/training_1/cp-{epoch:04d}.ckpt",
+                    default="/content/drive/My Drive/CS Internship/DeepLab_v3/deeplab_v3_plus_tensorflow_v2/checkpoints/training_1/cp-{epoch:04d}.ckpt",
                     help='directory that saves checkpoints.')
 parser.add_argument('--tensorboard_dir', type=str,
-                    default= '/content/drive/My Drive/CS Internship/DeepLab_v3/deeplab_v3_plus_tensorflow_v2/logs',
+                    default='/content/drive/My Drive/CS Internship/DeepLab_v3/deeplab_v3_plus_tensorflow_v2/logs',
                     help='directory that saves tensorboard logs.')
 parser.add_argument('--restore', type=str,
-                    default= None,
+                    default=None,
                     help='path of the checkpoint you want to restore.')
 parser.add_argument('--epoch', type=int,
-                    default= 300,
+                    default=300,
                     help='number of epochs to train.')
 parser.add_argument('--saving_interval', type=int,
-                    default= 2,
+                    default=2,
                     help='save every x epochs.')
 parser.add_argument('--m', type=int,
-                    default= 0.9997,
+                    default=0.9997,
                     help='training momentum.')
 parser.add_argument('--e', type=int,
-                    default= 1e-5,
+                    default=1e-5,
                     help='training epsilon.')
 parser.add_argument('--lr', type=int,
-                    default= 1e-4,
+                    default=1e-4,
                     help='learning rate.')
 
 # Global variables
@@ -142,7 +142,8 @@ def make_dataset(train_img_list, train_msk_list, val_img_list, val_msk_list):
 
     return train_dataset, val_dataset
 
-def define_model(H, W, num_classes, momentum = 0.9997, epsilon = 1e-5, learning_rate = 1e-4):
+
+def define_model(H, W, num_classes, momentum=0.9997, epsilon=1e-5, learning_rate=1e-4):
     loss = tf.losses.SparseCategoricalCrossentropy(from_logits=True)
     strategy = tf.distribute.MirroredStrategy()
     with strategy.scope():
@@ -158,7 +159,8 @@ def define_model(H, W, num_classes, momentum = 0.9997, epsilon = 1e-5, learning_
                       metrics=['accuracy'])
     return model
 
-def define_callbacks(tb_logs_path, checkpoint_path, saving_interval = 2):
+
+def define_callbacks(tb_logs_path, checkpoint_path, saving_interval=2):
     tb = TensorBoard(log_dir=tb_logs_path, write_graph=True, update_freq='batch')
     checkpoint_dir = os.path.dirname(checkpoint_path)
     mc = ModelCheckpoint(mode='min',
@@ -169,6 +171,7 @@ def define_callbacks(tb_logs_path, checkpoint_path, saving_interval = 2):
                          verbose=1)
     return [mc, tb]
 
+
 def main():
     FLAGS, unparsed = parser.parse_known_args()
     train_img_list, train_msk_list, val_img_list, val_msk_list = make_list_from_txt(FLAGS.txt_dir)
@@ -176,23 +179,21 @@ def main():
     momentum, epsilon, learning_rate = FLAGS.m, FLAGS.e, FLAGS.lr
     model = define_model(H, W, num_classes, momentum, epsilon, learning_rate)
     callbacks = define_callbacks(FLAGS.tensorboad_dir, FLAGS.checkpoint_dir, FLAGS.saving_interval)
-    if FLAGS.restore: # the restore flag is not None
+    if FLAGS.restore:  # the restore flag is not None
         strategy = tf.distribute.MirroredStrategy()
         with strategy.scope():
             model.load_weight(FLAGS.restore)
+
+    class_weights = [1]*21 + [0]  # set the weight of class 22 as 0
     model.fit(train_dataset,
               steps_per_epoch=len(train_img_list) // batch_size,
               epochs=FLAGS.epoch,
               verbose=1,
               validation_data=val_dataset,
               validation_steps=len(val_img_list) // batch_size,
-              callbacks=callbacks)
+              callbacks=callbacks,
+              class_weight=class_weights)
+
 
 if __name__ == '__main__':
     main()
-
-
-
-
-
-
