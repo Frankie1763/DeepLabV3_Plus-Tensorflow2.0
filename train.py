@@ -178,7 +178,7 @@ def main():
     train_dataset, val_dataset = make_dataset(train_img_list, train_msk_list, val_img_list, val_msk_list)
     momentum, epsilon, learning_rate = FLAGS.m, FLAGS.e, FLAGS.lr
     model = define_model(H, W, num_classes, momentum, epsilon, learning_rate)
-    callbacks = define_callbacks(FLAGS.tensorboad_dir, FLAGS.checkpoint_dir, FLAGS.saving_interval)
+    callbacks = define_callbacks(FLAGS.tensorboard_dir, FLAGS.checkpoint_dir, FLAGS.saving_interval)
     if FLAGS.restore:  # the restore flag is not None
         strategy = tf.distribute.MirroredStrategy()
         with strategy.scope():
