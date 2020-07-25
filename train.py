@@ -1,4 +1,3 @@
-import os
 import tensorflow as tf
 import argparse
 from tensorflow.keras.callbacks import TensorBoard, ModelCheckpoint
@@ -186,25 +185,24 @@ def weightedLoss(originalLossFunc, weightsList):  # function to set weights on l
 def define_model(H, W, num_classes, momentum=0.9997, epsilon=1e-5, learning_rate=1e-4):
     loss = tf.losses.SparseCategoricalCrossentropy(from_logits=True)
     loss = weightedLoss(loss, class_weights)  # use the weighed loss function
-    strategy = tf.distribute.MirroredStrategy()
-    with strategy.scope():
-        model = DeepLabV3Plus(H, W, num_classes)
-        for layer in model.layers:
-            if isinstance(layer, tf.keras.layers.BatchNormalization):
-                layer.momentum = momentum
-                layer.epsilon = epsilon
-            elif isinstance(layer, tf.keras.layers.Conv2D):
-                layer.kernel_regularizer = tf.keras.regularizers.l2(1e-4)
+    # strategy = tf.distribute.MirroredStrategy()
+    # with strategy.scope():
+    model = DeepLabV3Plus(H, W, num_classes)
+    for layer in model.layers:
+        if isinstance(layer, tf.keras.layers.BatchNormalization):
+            layer.momentum = momentum
+            layer.epsilon = epsilon
+        elif isinstance(layer, tf.keras.layers.Conv2D):
+            layer.kernel_regularizer = tf.keras.regularizers.l2(1e-4)
 
-        model.compile(loss=loss,
-                      optimizer=tf.optimizers.Adam(learning_rate=learning_rate),
-                      metrics=['accuracy'])
+    model.compile(loss=loss,
+                  optimizer=tf.optimizers.Adam(learning_rate=learning_rate),
+                  metrics=['accuracy'])
     return model
 
 
 def define_callbacks(tb_logs_path, checkpoint_path, saving_interval=2):
     tb = TensorBoard(log_dir=tb_logs_path, write_graph=True, update_freq='batch')
-    checkpoint_dir = os.path.dirname(checkpoint_path)
     mc = ModelCheckpoint(mode='min',
                          filepath=checkpoint_path,
                          monitor='val_loss',
@@ -226,9 +224,7 @@ def main():
     callbacks = define_callbacks(FLAGS.tensorboard_dir, FLAGS.ckpt_dir, FLAGS.saving_interval)
     if FLAGS.restore:  # the restore flag is not None
         print("Restore training weights...")
-        strategy = tf.distribute.MirroredStrategy()
-        with strategy.scope():
-            model.load_weight(FLAGS.restore)
+        model.load_weight(FLAGS.restore)
 
     print("Start training...")
     model.fit(train_dataset,
