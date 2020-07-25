@@ -155,15 +155,14 @@ def weightedLoss(originalLossFunc, weightsList):  # function to set weights on l
         classSelectors = tf.keras.backend.argmax(true, axis=axis)
         # if your loss is sparse, use only true as classSelectors
 
-        # considering weights are ordered by class, for each class
-        # true(1) if the class index is equal to the weight index
-        classSelectors = [tf.keras.backend.equal(i, classSelectors) for i in range(len(weightsList))]
-
-
         # casting boolean to float for calculations
         # each tensor in the list contains 1 where ground true class is equal to its index
         # if you sum all these, you will get a tensor full of ones.
         classSelectors = [tf.keras.backend.cast(x, tf.int64) for x in classSelectors]
+
+        # considering weights are ordered by class, for each class
+        # true(1) if the class index is equal to the weight index
+        classSelectors = [tf.keras.backend.equal(i, classSelectors) for i in range(len(weightsList))]
 
         # for each of the selections above, multiply their respective weight
         weights = [sel * w for sel, w in zip(classSelectors, weightsList)]
