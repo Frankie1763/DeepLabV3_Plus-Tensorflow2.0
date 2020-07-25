@@ -163,7 +163,7 @@ def weightedLoss(originalLossFunc, weightsList):  # function to set weights on l
         # casting boolean to float for calculations
         # each tensor in the list contains 1 where ground true class is equal to its index
         # if you sum all these, you will get a tensor full of ones.
-        classSelectors = [tf.keras.backend.cast(x, tf.keras.backend.floatx()) for x in classSelectors]
+        classSelectors = [tf.keras.backend.cast(x, tf.int64) for x in classSelectors]
 
         # for each of the selections above, multiply their respective weight
         weights = [sel * w for sel, w in zip(classSelectors, weightsList)]
