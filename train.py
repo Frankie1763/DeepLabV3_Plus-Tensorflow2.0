@@ -9,7 +9,7 @@ print('TensorFlow', tf.__version__)
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--txt_dir', type=str,
-                    default='/content/drive/My Drive/CS Internship/DeepLab_v3/deeplab_v3_tensorflow_v1/dataset',
+                    default='/content/drive/My Drive/CS Internship/DeepLab_v3/deeplab_v3_tensorflow_v1/dataset/',
                     help='directory that contains the train, val txt files.')
 parser.add_argument('--ckpt_dir', type=str,
                     default="/content/drive/My Drive/CS Internship/DeepLab_v3/deeplab_v3_plus_tensorflow_v2/checkpoints/training_1/cp-{epoch:04d}.ckpt",
