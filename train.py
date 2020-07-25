@@ -39,8 +39,9 @@ parser.add_argument('--lr', type=int,
 # Global variables
 batch_size = 10
 H, W = 512, 512
-num_classes = 22  # including background and the boundry pixels
+num_classes = 22  # including background and the boundary pixels
 _DEPTH = 3
+class_weights = [1] * 21 + [0]  # ignore the 22nd class
 
 
 def make_list_from_txt(txt_dir):
@@ -143,8 +144,47 @@ def make_dataset(train_img_list, train_msk_list, val_img_list, val_msk_list):
     return train_dataset, val_dataset
 
 
+def weightedLoss(originalLossFunc, weightsList):  # function to set weights on loss function
+    def lossFunc(true, pred):
+        axis = -1  # if channels last
+        # axis=  1 #if channels first
+
+        # argmax returns the index of the element with the greatest value
+        # done in the class axis, it returns the class index
+        classSelectors = K.argmax(true, axis=axis)
+        # if your loss is sparse, use only true as classSelectors
+
+        # considering weights are ordered by class, for each class
+        # true(1) if the class index is equal to the weight index
+        classSelectors = [K.equal(i, classSelectors) for i in range(len(weightsList))]
+
+        # casting boolean to float for calculations
+        # each tensor in the list contains 1 where ground true class is equal to its index
+        # if you sum all these, you will get a tensor full of ones.
+        classSelectors = [K.cast(x, K.floatx()) for x in classSelectors]
+
+        # for each of the selections above, multiply their respective weight
+        weights = [sel * w for sel, w in zip(classSelectors, weightsList)]
+
+        # sums all the selections
+        # result is a tensor with the respective weight for each element in predictions
+        weightMultiplier = weights[0]
+        for i in range(1, len(weights)):
+            weightMultiplier = weightMultiplier + weights[i]
+
+        # make sure your originalLossFunc only collapses the class axis
+        # you need the other axes intact to multiply the weights tensor
+        loss = originalLossFunc(true, pred)
+        loss = loss * weightMultiplier
+
+        return loss
+
+    return lossFunc
+
+
 def define_model(H, W, num_classes, momentum=0.9997, epsilon=1e-5, learning_rate=1e-4):
     loss = tf.losses.SparseCategoricalCrossentropy(from_logits=True)
+    loss = weightedLoss(loss, class_weights)  # use the weighed loss function
     strategy = tf.distribute.MirroredStrategy()
     with strategy.scope():
         model = DeepLabV3Plus(H, W, num_classes)
@@ -154,6 +194,7 @@ def define_model(H, W, num_classes, momentum=0.9997, epsilon=1e-5, learning_rate
                 layer.epsilon = epsilon
             elif isinstance(layer, tf.keras.layers.Conv2D):
                 layer.kernel_regularizer = tf.keras.regularizers.l2(1e-4)
+
         model.compile(loss=loss,
                       optimizer=tf.optimizers.Adam(learning_rate=learning_rate),
                       metrics=['accuracy'])
@@ -188,13 +229,6 @@ def main():
         with strategy.scope():
             model.load_weight(FLAGS.restore)
 
-    # set the weight of class 22 as 0
-    class_weights = {}
-    for i in range(21):
-        class_weights[i] = 1
-    class_weights[21] = 0
-    print(class_weights)
-    
     print("Start training...")
     model.fit(train_dataset,
               steps_per_epoch=len(train_img_list) // batch_size,
@@ -202,8 +236,7 @@ def main():
               verbose=1,
               validation_data=val_dataset,
               validation_steps=len(val_img_list) // batch_size,
-              callbacks=callbacks,
-              class_weight=class_weights)
+              callbacks=callbacks)
 
 
 if __name__ == '__main__':
