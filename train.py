@@ -188,7 +188,13 @@ def main():
         with strategy.scope():
             model.load_weight(FLAGS.restore)
 
-    class_weights = [1]*21 + [0]  # set the weight of class 22 as 0
+    # set the weight of class 22 as 0
+    class_weights = {}
+    for i in range(21):
+        class_weights[i] = 1
+    class_weights[21] = 0
+    print(class_weights)
+    
     print("Start training...")
     model.fit(train_dataset,
               steps_per_epoch=len(train_img_list) // batch_size,
