@@ -181,7 +181,7 @@ def main():
     momentum, epsilon, learning_rate = FLAGS.m, FLAGS.e, FLAGS.lr
     model = define_model(H, W, num_classes, momentum, epsilon, learning_rate)
     print("Successfully defined the model!")
-    callbacks = define_callbacks(FLAGS.tensorboard_dir, FLAGS.checkpoint_dir, FLAGS.saving_interval)
+    callbacks = define_callbacks(FLAGS.tensorboard_dir, FLAGS.ckpt_dir, FLAGS.saving_interval)
     if FLAGS.restore:  # the restore flag is not None
         print("Restore training weights...")
         strategy = tf.distribute.MirroredStrategy()
