@@ -1,9 +1,8 @@
 import os
 import tensorflow as tf
 import argparse
-from tensorflow.keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping, LearningRateScheduler
+from tensorflow.keras.callbacks import TensorBoard, ModelCheckpoint
 from deeplab import DeepLabV3Plus
-import keras as K
 
 print('TensorFlow', tf.__version__)
 
@@ -13,7 +12,8 @@ parser.add_argument('--txt_dir', type=str,
                     default='/content/drive/My Drive/CS Internship/DeepLab_v3/deeplab_v3_tensorflow_v1/dataset/',
                     help='directory that contains the train, val txt files.')
 parser.add_argument('--ckpt_dir', type=str,
-                    default="/content/drive/My Drive/CS Internship/DeepLab_v3/deeplab_v3_plus_tensorflow_v2/checkpoints/training_1/cp-{epoch:04d}.ckpt",
+                    default="/content/drive/My Drive/CS Internship/DeepLab_v3/deeplab_v3_plus_tensorflow_v2"
+                            "/checkpoints/training_1/cp-{epoch:04d}.ckpt",
                     help='directory that saves checkpoints.')
 parser.add_argument('--tensorboard_dir', type=str,
                     default='/content/drive/My Drive/CS Internship/DeepLab_v3/deeplab_v3_plus_tensorflow_v2/logs',
@@ -152,18 +152,18 @@ def weightedLoss(originalLossFunc, weightsList):  # function to set weights on l
 
         # argmax returns the index of the element with the greatest value
         # done in the class axis, it returns the class index
-        classSelectors = K.argmax(true, axis=axis)
+        classSelectors = tf.keras.backend.argmax(true, axis=axis)
         # if your loss is sparse, use only true as classSelectors
 
         # considering weights are ordered by class, for each class
         # true(1) if the class index is equal to the weight index
-        classSelectors = [K.equal(i, classSelectors) for i in range(len(weightsList))]
+        classSelectors = [tf.keras.backend.equal(i, classSelectors) for i in range(len(weightsList))]
 
 
         # casting boolean to float for calculations
         # each tensor in the list contains 1 where ground true class is equal to its index
         # if you sum all these, you will get a tensor full of ones.
-        classSelectors = [K.cast(x, K.floatx()) for x in classSelectors]
+        classSelectors = [tf.keras.backend.cast(x, tf.keras.backend.floatx()) for x in classSelectors]
 
         # for each of the selections above, multiply their respective weight
         weights = [sel * w for sel, w in zip(classSelectors, weightsList)]
