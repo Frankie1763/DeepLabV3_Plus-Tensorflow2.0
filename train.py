@@ -175,7 +175,7 @@ def weightedLoss(originalLossFunc, weightsList):  # function to set weights on l
         # make sure your originalLossFunc only collapses the class axis
         # you need the other axes intact to multiply the weights tensor
         loss = originalLossFunc(true, pred)
-        loss = loss * weightMultiplier
+        loss = tf.cast(loss, tf.float32) * tf.cast(weightMultiplier, tf.float32)
 
         return loss
 
