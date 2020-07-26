@@ -17,7 +17,7 @@ python3 train.py -h
 ## To Do
 - [x] train on PASCAL 2012 
 - [ ] try other tf strategies
-- [ ] provide a better restoring function
+- [x] provide a better restoring function
 - [ ] test the performance on different classes
 - [ ] handle the boundary pixels in another way and compare the performance
 - [ ] use TFRecord to accelerate the training process
