@@ -38,6 +38,9 @@ parser.add_argument('--lr', type=int,
 parser.add_argument('--decay', type=int,
                     default=1e-6,
                     help='decay.')
+parser.add_argument('--starting_epoch', type=int,
+                    default=1,
+                    help='starting_epoch.')
 
 # Global variables
 batch_size = 10
@@ -230,12 +233,14 @@ def main():
         model.load_weight(FLAGS.restore)
 
     print("Start training...")
+    starting_epoch = FLAGS.starting_epoch
     model.fit(train_dataset,
               steps_per_epoch=len(train_img_list) // batch_size,
               epochs=FLAGS.epoch,
               verbose=1,
               validation_data=val_dataset,
               validation_steps=len(val_img_list) // batch_size,
+              initial_epoch=starting_epoch,
               callbacks=callbacks)
 
 
