@@ -27,14 +27,17 @@ parser.add_argument('--saving_interval', type=int,
                     default=2,
                     help='save every x epochs.')
 parser.add_argument('--m', type=int,
-                    default=0.9997,
+                    default=0.9,
                     help='training momentum.')
 parser.add_argument('--e', type=int,
                     default=1e-5,
                     help='training epsilon.')
 parser.add_argument('--lr', type=int,
-                    default=1e-4,
+                    default=1e-2,
                     help='learning rate.')
+parser.add_argument('--decay', type=int,
+                    default=1e-6,
+                    help='decay.')
 
 # Global variables
 batch_size = 10
@@ -182,7 +185,7 @@ def weightedLoss(originalLossFunc, weightsList):  # function to set weights on l
     return lossFunc
 
 
-def define_model(H, W, num_classes, momentum=0.9997, epsilon=1e-5, learning_rate=1e-4):
+def define_model(H, W, num_classes, momentum=0.9997, epsilon=1e-5, learning_rate=1e-2, decay=1e-6):
     loss = tf.losses.SparseCategoricalCrossentropy(from_logits=True)
     loss = weightedLoss(loss, class_weights)  # use the weighed loss function
     # strategy = tf.distribute.MirroredStrategy()
@@ -196,7 +199,7 @@ def define_model(H, W, num_classes, momentum=0.9997, epsilon=1e-5, learning_rate
             layer.kernel_regularizer = tf.keras.regularizers.l2(1e-4)
 
     model.compile(loss=loss,
-                  optimizer=tf.optimizers.Adam(learning_rate=learning_rate),
+                  optimizer=tf.optimizers.Adam(learning_rate=learning_rate,decay=decay),
                   metrics=['accuracy'])
     return model
 
@@ -218,8 +221,8 @@ def main():
     print("Successfully made data lists!")
     train_dataset, val_dataset = make_dataset(train_img_list, train_msk_list, val_img_list, val_msk_list)
     print("Successfully made dataset!")
-    momentum, epsilon, learning_rate = FLAGS.m, FLAGS.e, FLAGS.lr
-    model = define_model(H, W, num_classes, momentum, epsilon, learning_rate)
+    momentum, epsilon, learning_rate, decay = FLAGS.m, FLAGS.e, FLAGS.lr, FLAGS.decay
+    model = define_model(H, W, num_classes, momentum, epsilon, learning_rate, decay)
     print("Successfully defined the model!")
     callbacks = define_callbacks(FLAGS.tensorboard_dir, FLAGS.ckpt_dir, FLAGS.saving_interval)
     if FLAGS.restore:  # the restore flag is not None
