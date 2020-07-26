@@ -230,7 +230,7 @@ def main():
     callbacks = define_callbacks(FLAGS.tensorboard_dir, FLAGS.ckpt_dir, FLAGS.saving_interval)
     if FLAGS.restore:  # the restore flag is not None
         print("Restore training weights...")
-        model.load_weight(FLAGS.restore)
+        model.load_weights(FLAGS.restore)
 
     print("Start training...")
     starting_epoch = FLAGS.starting_epoch
