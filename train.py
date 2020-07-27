@@ -173,7 +173,7 @@ def weightedLoss(originalLossFunc, weightsList):  # function to set weights on l
         classSelectors = [tf.keras.backend.cast(x, tf.int64) for x in classSelectors]
 
         # for each of the selections above, multiply their respective weight
-        weights = [sel * w for sel, w in zip(classSelectors, weightsList)]
+        weights = [tf.cast(sel,tf.float32) * tf.cast(w,tf.float32) for sel, w in zip(classSelectors, weightsList)]
 
         # sums all the selections
         # result is a tensor with the respective weight for each element in predictions
