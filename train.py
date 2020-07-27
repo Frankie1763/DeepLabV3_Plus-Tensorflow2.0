@@ -48,9 +48,8 @@ H, W = 512, 512
 num_classes = 22  # including background and the boundary pixels
 _DEPTH = 3
 
-class_weights = [0.07, 1.68, 1.99, 1.48, 2.19, 1.48, 2.57, 0.93, 1.06, 0.88, 3.53, 1.74, 0.89, \ 
+class_weights = [0.07, 1.68, 1.99, 1.48, 2.19, 1.48, 2.57, 0.93, 1.06, 0.88, 3.53, 1.74, 0.89, \
                  2.28, 2.09, 0.13, 1.96, 3.36, 1.62, 2.04, 1.86, 0]  # ignore the 22nd class
-
 
 
 def make_list_from_txt(txt_dir):
@@ -165,7 +164,8 @@ def weightedLoss(originalLossFunc, weightsList):  # function to set weights on l
 
         # considering weights are ordered by class, for each class
         # true(1) if the class index is equal to the weight index
-        classSelectors = [tf.keras.backend.equal(tf.cast(i, tf.int64), tf.cast(classSelectors, tf.int64)) for i in range(len(weightsList))]
+        classSelectors = [tf.keras.backend.equal(tf.cast(i, tf.int64), tf.cast(classSelectors, tf.int64)) for i in
+                          range(len(weightsList))]
 
         # casting boolean to float for calculations
         # each tensor in the list contains 1 where ground true class is equal to its index
@@ -205,7 +205,7 @@ def define_model(H, W, num_classes, momentum=0.9997, epsilon=1e-5, learning_rate
             layer.kernel_regularizer = tf.keras.regularizers.l2(1e-4)
 
     model.compile(loss=loss,
-                  optimizer=tf.optimizers.Adam(learning_rate=learning_rate,decay=decay),
+                  optimizer=tf.optimizers.Adam(learning_rate=learning_rate, decay=decay),
                   metrics=['accuracy'])
     return model
 
