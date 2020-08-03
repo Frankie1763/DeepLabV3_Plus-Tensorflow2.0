@@ -57,7 +57,7 @@ def load_model(model_path):
     model.load_weights(model_path)
     return model
 
-def pipeline(image, save_img=False, save_dir=None, filename=None, model):
+def pipeline(image, model, save_img=False, save_dir=None, filename=None):
     global b
     alpha = 0.5
     dims = image.shape
@@ -84,7 +84,7 @@ def pipeline(image, save_img=False, save_dir=None, filename=None, model):
         plt.imshow(img_color / 255.0)
         # plt.imshow(out)
 
-def predict_label(img_path): # need to define global variable MODEL
+def predict_label(model, img_path): 
   img = img_to_array(load_img(img_path))
   img = cv2.resize(img, (W,H))
   img = tf.expand_dims(img, axis=0)
@@ -97,7 +97,7 @@ def predict_label(img_path): # need to define global variable MODEL
 def draw_masks(img_lst, model, output):
     for img_path in tqdm(img_lst):
         img = img_to_array(load_img(img_path))
-        pipeline(img, filename=img_path[-15:], save_dir=output, save_img=True, model)
+        pipeline(img, model, filename=img_path[-15:], save_dir=output, save_img=True)
 
 def main():
     FLAGS, unparsed = parser.parse_known_args()
