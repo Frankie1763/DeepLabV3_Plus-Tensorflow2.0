@@ -19,7 +19,7 @@ python3 train.py -h
 - [ ] try other tf strategies
 - [x] provide a better restoring function
 - [ ] test the performance on different classes
-- [ ] handle the boundary pixels in another way and compare the performance
+- [x] handle the boundary pixels in another way and compare the performance
 - [ ] use TFRecord to accelerate the training process
 - [ ] solve the unknown error at the beginning of each new training
 
