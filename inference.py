@@ -12,6 +12,7 @@ import argparse
 print('Tensorflow', tf.__version__)
 
 parser = argparse.ArgumentParser()
+
 parser.add_argument("--model", type=str,
                     default="/content/drive/My Drive/CS Internship/DeepLab_v3/\
                             deeplab_v3_plus_tensorflow_v2/checkpoints/training_new_1/cp-0148.ckpt",
@@ -38,24 +39,27 @@ label_colours = [(0, 0, 0),  # 0=background
                  # 11=dining table, 12=dog, 13=horse, 14=motorbike, 15=person
                  (192, 128, 0), (64, 0, 128), (192, 0, 128), (64, 128, 128), (192, 128, 128),
                  # 16=potted plant, 17=sheep, 18=sofa, 19=train, 20=tv/monitor, 21=boundary
-                 (0, 64, 0), (128, 64, 0), (0, 192, 0), (128, 192, 0), (0, 64, 128), (255,255,255)]
+                 (0, 64, 0), (128, 64, 0), (0, 192, 0), (128, 192, 0), (0, 64, 128), (255, 255, 255)]
 
 batch_size = 10
 H, W = 512, 512
 num_classes = 22  # including background and the boundary pixels
 _DEPTH = 3
 
-def create_list(img_txt,msk_txt):
-    with open(img_txt,"r") as f:
+
+def create_list(img_txt, msk_txt):
+    with open(img_txt, "r") as f:
         img_lst = [line[:-1] for line in f.readlines()]
-    with open(msk_txt,"r") as f :
+    with open(msk_txt, "r") as f:
         msk_lst = [line[:-1] for line in f.readlines()]
     return img_lst, msk_lst
+
 
 def load_model(model_path):
     model = DeepLabV3Plus(H, W, num_classes)
     model.load_weights(model_path)
     return model
+
 
 def pipeline(image, model, save_img=False, save_dir=None, filename=None):
     global b
@@ -84,20 +88,23 @@ def pipeline(image, model, save_img=False, save_dir=None, filename=None):
         plt.imshow(img_color / 255.0)
         # plt.imshow(out)
 
-def predict_label(model, img_path): 
-  img = img_to_array(load_img(img_path))
-  img = cv2.resize(img, (W,H))
-  img = tf.expand_dims(img, axis=0)
-  img = preprocess_input(img)
-  pred_label = model.predict(img)
-  pred_label = np.squeeze(pred_label)
-  pred_label = np.argmax(pred_label,axis=2)
-  return pred_label
+
+def predict_label(model, img_path):
+    img = img_to_array(load_img(img_path))
+    img = cv2.resize(img, (W, H))
+    img = tf.expand_dims(img, axis=0)
+    img = preprocess_input(img)
+    pred_label = model.predict(img)
+    pred_label = np.squeeze(pred_label)
+    pred_label = np.argmax(pred_label, axis=2)
+    return pred_label
+
 
 def draw_masks(img_lst, model, output):
     for img_path in tqdm(img_lst):
         img = img_to_array(load_img(img_path))
         pipeline(img, model, filename=img_path[-15:], save_dir=output, save_img=True)
+
 
 def main():
     FLAGS, unparsed = parser.parse_known_args()
@@ -105,3 +112,6 @@ def main():
     img_lst, msk_lst = create_list(FLAGS.img_txt, FLAGS.msk_txt)
     draw_masks(img_lst, model, FLAGS.output)
 
+
+if __name__ == '__main__':
+    main()
