@@ -4,6 +4,8 @@
     <content url="file://$MODULE_DIR$" />
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module" module-name="tensorflow-deeplab-v3" />
+    <orderEntry type="module" module-name="id_files" />
   </component>
   <component name="PyDocumentationSettings">
     <option name="format" value="PLAIN" />
