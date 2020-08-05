@@ -1,7 +1,8 @@
 import tensorflow as tf
 from tensorflow.keras import backend as K
 from tensorflow.keras.models import Model
-from tensorflow.keras.layers import AveragePooling2D, Lambda, Conv2D, Conv2DTranspose, Activation, Reshape, concatenate, Concatenate, BatchNormalization, ZeroPadding2D
+from tensorflow.keras.layers import AveragePooling2D, Lambda, Conv2D, Conv2DTranspose, Activation, Reshape, concatenate, \
+    Concatenate, BatchNormalization, ZeroPadding2D
 from tensorflow.keras.applications import ResNet50
 
 
@@ -13,6 +14,7 @@ def Upsample(tensor, size):
         resized = tf.image.resize(
             images=x, size=size)
         return resized
+
     y = Lambda(lambda x: bilinear_upsample(x, size),
                output_shape=size, name=name)(tensor)
     return y
@@ -65,7 +67,7 @@ def DeepLabV3Plus(img_height, img_width, nclasses=21):
 
     base_model = ResNet50(input_shape=(
         img_height, img_width, 3), weights='imagenet', include_top=False)
-    
+
     image_features = base_model.get_layer('conv4_block1_out').output
     x_a = ASPP(image_features)
     x_a = Upsample(tensor=x_a, size=[img_height // 4, img_width // 4])
@@ -89,7 +91,6 @@ def DeepLabV3Plus(img_height, img_width, nclasses=21):
     x = Activation('relu', name='activation_decoder_2')(x)
     x = Upsample(x, [img_height, img_width])
 
-
     x = Conv2D(nclasses, (1, 1), name='output_layer')(x)
     '''
     x = Activation('softmax')(x) 
@@ -97,7 +98,7 @@ def DeepLabV3Plus(img_height, img_width, nclasses=21):
     Args:
         from_logits: Whether `y_pred` is expected to be a logits tensor. By default,
         we assume that `y_pred` encodes a probability distribution.
-    '''     
+    '''
     model = Model(inputs=base_model.input, outputs=x, name='DeepLabV3_Plus')
     print(f'*** Output_Shape => {model.output_shape} ***')
     return model
