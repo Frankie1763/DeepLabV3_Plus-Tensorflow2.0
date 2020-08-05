@@ -91,11 +91,8 @@ def DeepLabV3Plus(img_height, img_width, nclasses=21):
     x = Activation('relu', name='activation_decoder_2')(x)  # size: 128*128*256
     # x = Upsample(x, [img_height, img_width])  # size: 512*512*256
 
-    # x = Conv2D(filters=16*nclasses, kernel_size=3, padding='same', activation='relu', kernel_initializer='he_normal', name='duc_layer', use_bias=False)(x)
     x = Conv2D(filters=16*nclasses, kernel_size=3, padding='same', activation='relu',
                kernel_initializer='he_normal', name='duc_layer', use_bias=False)(x)
-    x = BatchNormalization(name=f'bn_decoder_3')(x)
-    x = Activation('relu', name='activation_decoder_3')(x)
 
     x = Conv2D(nclasses, (1, 1), name='output_layer')(x)
     '''
