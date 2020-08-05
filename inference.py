@@ -14,16 +14,16 @@ print('Tensorflow', tf.__version__)
 parser = argparse.ArgumentParser()
 
 parser.add_argument("--model", type=str,
-                    default="/content/drive/My Drive/CS Internship/DeepLab_v3/deeplab_v3_plus_tensorflow_v2/checkpoints/training_new_1/cp-0148.ckpt/",
+                    default="/content/drive/My Drive/CS Internship/DeepLab_v3/deeplab_v3_plus_tensorflow_v2/checkpoints/training_new_1/cp-0148.ckpt",
                     help="trained model path")
 parser.add_argument("--output", type=str,
                     default="/content/drive/My Drive/CS Internship/DeepLab_v3/deeplab_v3_plus_tensorflow_v2/val_output_new/",
                     help="output path")
 parser.add_argument("--img_txt", type=str,
-                    default="/content/drive/My Drive/CS Internship/DeepLab_v3/deeplab_v3_tensorflow_v1/dataset/val_img_full_path.txt/",
+                    default="/content/drive/My Drive/CS Internship/DeepLab_v3/deeplab_v3_tensorflow_v1/dataset/val_img_full_path.txt",
                     help="text file that contains full path of test images")
 parser.add_argument("--msk_txt", type=str,
-                    default="/content/drive/My Drive/CS Internship/DeepLab_v3/deeplab_v3_tensorflow_v1/dataset/val_msk_full_path.txt/",
+                    default="/content/drive/My Drive/CS Internship/DeepLab_v3/deeplab_v3_tensorflow_v1/dataset/val_msk_full_path.txt",
                     help="text file that contains full path of test masks")
 
 # global variables
