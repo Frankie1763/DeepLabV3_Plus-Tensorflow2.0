@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 from tensorflow.keras import backend as K
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import AveragePooling2D, Lambda, Conv2D, Conv2DTranspose, Activation, Reshape, concatenate, \
@@ -18,7 +19,6 @@ def Upsample(tensor, size):
     y = Lambda(lambda x: bilinear_upsample(x, size),
                output_shape=size, name=name)(tensor)
     return y
-
 
 def ASPP(tensor):
     '''atrous spatial pyramid pooling'''
@@ -91,7 +91,11 @@ def DeepLabV3Plus(img_height, img_width, nclasses=21):
     x = Activation('relu', name='activation_decoder_2')(x)  # size: 128*128*256
     # x = Upsample(x, [img_height, img_width])  # size: 512*512*256
 
-    x = Conv2D(filters=16*nclasses, kernel_size=3, padding='same', activation='relu', kernel_initializer='he_normal', name='duc_layer', use_bias=False)(x)
+    x = Conv2D(filters=16*nclasses, kernel_size=3, padding='same', activation='relu',
+               kernel_initializer='he_normal', name='duc_layer', use_bias=False)(x)
+
+    # x = tf.reshape(x, [0, nclasses, -1])
+    x = tf.reshape(x, [0, 512, 512, 22], name='reshape')
     # x = Conv2D(nclasses, (1, 1), name='output_layer')(x)
     '''
     x = Activation('softmax')(x) 
