@@ -15,7 +15,7 @@ parser.add_argument('--ckpt_dir', type=str,
                             "/checkpoints/training_1/cp-{epoch:04d}.ckpt",
                     help='directory that saves checkpoints.')
 parser.add_argument('--tensorboard_dir', type=str,
-                    default='/content/drive/My Drive/CS Internship/DeepLab_v3/deeplab_v3_plus_tensorflow_v2/logs',
+                    default='/content/drive/My Drive/CS Internship/DeepLab_v3/deeplab_v3_plus_tensorflow_v2/logs/logs_new',
                     help='directory that saves tensorboard logs.')
 parser.add_argument('--restore', type=str,
                     default=None,
@@ -24,7 +24,7 @@ parser.add_argument('--epoch', type=int,
                     default=300,
                     help='number of epochs to train.')
 parser.add_argument('--saving_interval', type=int,
-                    default=2,
+                    default=5,
                     help='save every x epochs.')
 parser.add_argument('--m', type=int,
                     default=0.9,

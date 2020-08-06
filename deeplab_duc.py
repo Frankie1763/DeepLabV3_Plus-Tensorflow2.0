@@ -95,7 +95,7 @@ def DeepLabV3Plus(img_height, img_width, nclasses=21):
                kernel_initializer='he_normal', name='duc_layer', use_bias=False)(x)
 
     # x = tf.reshape(x, [0, nclasses, -1])
-    x = tf.reshape(x, [0, 512, 512, 22], name='reshape')
+    x = tf.reshape(x, [-1, 512, 512, 22], name='reshape')
     # x = Conv2D(nclasses, (1, 1), name='output_layer')(x)
     '''
     x = Activation('softmax')(x) 
