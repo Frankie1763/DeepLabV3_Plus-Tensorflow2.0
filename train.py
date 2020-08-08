@@ -1,7 +1,7 @@
 import tensorflow as tf
 import argparse
 from tensorflow.keras.callbacks import TensorBoard, ModelCheckpoint
-from deeplab import DeepLabV3Plus
+from deeplab_duc import DeepLabV3Plus
 
 print('TensorFlow', tf.__version__)
 
@@ -15,7 +15,7 @@ parser.add_argument('--ckpt_dir', type=str,
                             "/checkpoints/training_1/cp-{epoch:04d}.ckpt",
                     help='directory that saves checkpoints.')
 parser.add_argument('--tensorboard_dir', type=str,
-                    default='/content/drive/My Drive/CS Internship/DeepLab_v3/deeplab_v3_plus_tensorflow_v2/logs/logs_new',
+                    default='/content/drive/My Drive/CS Internship/DeepLab_v3/deeplab_v3_plus_tensorflow_v2/logs/logs_new/',
                     help='directory that saves tensorboard logs.')
 parser.add_argument('--restore', type=str,
                     default=None,
@@ -26,16 +26,16 @@ parser.add_argument('--epoch', type=int,
 parser.add_argument('--saving_interval', type=int,
                     default=5,
                     help='save every x epochs.')
-parser.add_argument('--m', type=int,
+parser.add_argument('--m', type=float,
                     default=0.9,
                     help='training momentum.')
-parser.add_argument('--e', type=int,
+parser.add_argument('--e', type=float,
                     default=1e-5,
                     help='training epsilon.')
-parser.add_argument('--lr', type=int,
+parser.add_argument('--lr', type=float,
                     default=1e-2,
                     help='learning rate.')
-parser.add_argument('--decay', type=int,
+parser.add_argument('--decay', type=float,
                     default=1e-6,
                     help='decay.')
 parser.add_argument('--starting_epoch', type=int,
