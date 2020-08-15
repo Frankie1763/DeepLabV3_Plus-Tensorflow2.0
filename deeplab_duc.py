@@ -63,11 +63,11 @@ def ASPP(tensor):
 
 def reshape(tensor, h, w, d):
   output = np.zeros((h*d, w*d))
-  for i in range(len(tensor)):
+  for i in range(tensor.shape[1]):
     s_r = i//d
     s_c = i%d
-    for j in range(len(tensor[0])):
-      for k in range(len(tensor[0][0])):
+    for j in range(tensor.shape[2]):
+      for k in range(tensor.shape[3]):
         output[s_r+d*j][s_c+d*k] = tensor[i][j][k]
   return output
 
@@ -104,8 +104,8 @@ def DeepLabV3Plus(img_height, img_width, nclasses=21):
     x = Conv2D(filters=16*nclasses, kernel_size=3, padding='same', activation='relu',
                kernel_initializer='he_normal', name='duc_layer', use_bias=False)(x)
 
-    # x = tf.reshape(x, [0, nclasses, -1])
-    x = reshape(x, 128, 128, 2)
+    x = tf.reshape(x, [0, nclasses, -1])
+    # x = reshape(x, 128, 128, 2)
     # x = Conv2D(nclasses, (1, 1), name='output_layer')(x)
     '''
     x = Activation('softmax')(x) 
