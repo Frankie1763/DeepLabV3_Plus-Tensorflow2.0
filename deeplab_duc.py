@@ -61,6 +61,16 @@ def ASPP(tensor):
     y = Activation('relu', name=f'relu_final')(y)
     return y
 
+def reshape(tensor, h, w, d):
+  output = np.zeros((h*d, w*d))
+  for i in range(len(tensor)):
+    s_r = i//d
+    s_c = i%d
+    for j in range(len(tensor[0])):
+      for k in range(len(tensor[0][0])):
+        output[s_r+d*j][s_c+d*k] = tensor[i][j][k]
+  return output
+
 
 def DeepLabV3Plus(img_height, img_width, nclasses=21):
     print('*** Building DeepLabv3Plus Network ***')
@@ -95,7 +105,7 @@ def DeepLabV3Plus(img_height, img_width, nclasses=21):
                kernel_initializer='he_normal', name='duc_layer', use_bias=False)(x)
 
     # x = tf.reshape(x, [0, nclasses, -1])
-    x = tf.reshape(x, [-1, 512, 512, 22], name='reshape')
+    x = reshape(x, 128, 128, 2)
     # x = Conv2D(nclasses, (1, 1), name='output_layer')(x)
     '''
     x = Activation('softmax')(x) 
