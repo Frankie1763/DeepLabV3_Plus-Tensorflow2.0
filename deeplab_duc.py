@@ -71,10 +71,10 @@ def DeepLabV3Plus(img_height, img_width, nclasses=21):
     image_features = base_model.get_layer('conv4_block1_out').output
     x_a = ASPP(image_features)  # size=32x32x256
 
-    x_a = Conv2D(filters=256*16, kernel_size=3, padding='same', activation='relu',
-               kernel_initializer='he_normal', name='duc_layer1', use_bias=False)(x_a)  # size =32x32x256x16
-    x_a = tf.reshape(x_a, [-1, img_height//4, img_width//4, 256])  # size=128x128x256
-    # x_a = Upsample(tensor=x_a, size=[img_height // 4, img_width // 4])
+    # x_a = Conv2D(filters=256*16, kernel_size=3, padding='same', activation='relu',
+    #            kernel_initializer='he_normal', name='duc_layer1', use_bias=False)(x_a)  # size =32x32x256x16
+    # x_a = tf.reshape(x_a, [-1, img_height//4, img_width//4, 256])  # size=128x128x256
+    x_a = Upsample(tensor=x_a, size=[img_height // 4, img_width // 4])
 
     x_b = base_model.get_layer('conv2_block3_out').output
     x_b = Conv2D(filters=48, kernel_size=1, padding='same',
@@ -98,7 +98,7 @@ def DeepLabV3Plus(img_height, img_width, nclasses=21):
     x = Conv2D(filters=16*nclasses, kernel_size=3, padding='same', activation='relu',
                kernel_initializer='he_normal', name='duc_layer2', use_bias=False)(x)
 
-    x = tf.reshape(x, [-1, 512, 512, 22], name='reshape')
+    x = tf.nn.depth_to_space(x, 4, name='reshape')
     # x = reshape(x, 128, 128, 2)
     # x = Conv2D(nclasses, (1, 1), name='output_layer')(x)
     '''
