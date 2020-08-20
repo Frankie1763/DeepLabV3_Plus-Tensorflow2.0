@@ -20,8 +20,7 @@ def Upsample(tensor, size):
 
 def ASPP(tensor):
     '''atrous spatial pyramid pooling'''
-    dims = tensor.shape
-
+    dims = K.int_shape(tensor)
     y_pool = AveragePooling2D(pool_size=(
         dims[1], dims[2]), name='average_pooling')(tensor)
     y_pool = Conv2D(filters=256, kernel_size=1, padding='same',
@@ -65,11 +64,11 @@ def DeepLabV3Plus(img_height, img_width, nclasses=21):
 
     base_model = Xception(input_shape=(img_height, img_width, 3))
     
-    image_features = base_model.get_layer('activation_198').output
+    image_features = base_model.get_layer('activation_62').output
     x_a = ASPP(image_features)
     x_a = Upsample(tensor=x_a, size=[img_height // 4, img_width // 4])
 
-    x_b = base_model.get_layer('activation_142').output
+    x_b = base_model.get_layer('activation_6').output
     x_b = Conv2D(filters=48, kernel_size=1, padding='same',
                  kernel_initializer='he_normal', name='low_level_projection', use_bias=False)(x_b)
     x_b = BatchNormalization(name=f'bn_low_level_projection')(x_b)
