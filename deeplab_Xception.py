@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow.keras.models import Model
 from tensorflow.python.keras import backend as K
-from tensorflow.keras.layers import Input, Add, Dropout, DepthwiseConv2D, AveragePooling2D, Lambda, Conv2D, Conv2DTranspose, Activation, Reshape, Concatenate, BatchNormalization, ZeroPadding2D
+from tensorflow.keras.layers import Input, Add, Dropout, DepthwiseConv2D, AveragePooling2D, Lambda, Conv2D, Conv2DTranspose, Activation, Reshape, Concatenate,concatenate, BatchNormalization, ZeroPadding2D
 from Xception import Xception
 
 
@@ -50,7 +50,7 @@ def ASPP(tensor):
     y_18 = BatchNormalization(name=f'bn_5')(y_18)
     y_18 = Activation('relu', name=f'relu_5')(y_18)
 
-    y = Concatenate([y_pool, y_1, y_6, y_12, y_18], name='ASPP_concat')
+    y = concatenate([y_pool, y_1, y_6, y_12, y_18], name='ASPP_concat')
 
     y = Conv2D(filters=256, kernel_size=1, dilation_rate=1, padding='same',
                kernel_initializer='he_normal', name='ASPP_conv2d_final', use_bias=False)(y)
@@ -74,7 +74,7 @@ def DeepLabV3Plus(img_height, img_width, nclasses=21):
     x_b = BatchNormalization(name=f'bn_low_level_projection')(x_b)
     x_b = Activation('relu', name='low_level_activation')(x_b)
 
-    x = Concatenate([x_a, x_b], name='decoder_concat')
+    x = concatenate([x_a, x_b], name='decoder_concat')
 
     x = Conv2D(filters=256, kernel_size=3, padding='same', activation='relu',
                kernel_initializer='he_normal', name='decoder_conv2d_1', use_bias=False)(x)
