@@ -1,7 +1,7 @@
 import tensorflow as tf
 import argparse
 from tensorflow.keras.callbacks import TensorBoard, ModelCheckpoint
-from deeplab import DeepLabV3Plus
+from deeplab_Xception import DeepLabV3Plus
 
 print('TensorFlow', tf.__version__)
 
