@@ -66,11 +66,11 @@ def DeepLabV3Plus(img_height, img_width, nclasses=21):
     base_model = ResNet50(input_shape=(
         img_height, img_width, 3), weights='imagenet', include_top=False)
     
-    image_features = base_model.get_layer('conv4_block1_out').output
+    image_features = base_model.get_layer('conv4_block6_out').output  # size = 32*32*1024
     x_a = ASPP(image_features)
     x_a = Upsample(tensor=x_a, size=[img_height // 4, img_width // 4])
 
-    x_b = base_model.get_layer('conv2_block3_out').output
+    x_b = base_model.get_layer('conv2_block3_out').output  # size = 128*128*256
     x_b = Conv2D(filters=48, kernel_size=1, padding='same',
                  kernel_initializer='he_normal', name='low_level_projection', use_bias=False)(x_b)
     x_b = BatchNormalization(name=f'bn_low_level_projection')(x_b)

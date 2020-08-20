@@ -1,7 +1,7 @@
 import tensorflow as tf
 import argparse
 from tensorflow.keras.callbacks import TensorBoard, ModelCheckpoint
-from deeplab_duc import DeepLabV3Plus
+from deeplab import DeepLabV3Plus
 
 print('TensorFlow', tf.__version__)
 
@@ -48,9 +48,9 @@ H, W = 512, 512
 num_classes = 22  # including background and the boundary pixels
 _DEPTH = 3
 
-class_weights = [0.07, 1.68, 1.99, 1.48, 2.19, 1.48, 2.57, 0.93, 1.06, 0.88, 3.53, 1.74, 0.89, \
-                 2.28, 2.09, 0.13, 1.96, 3.36, 1.62, 2.04, 1.86, 0]  # ignore the 22nd class
-
+# class_weights = [0.07, 1.68, 1.99, 1.48, 2.19, 1.48, 2.57, 0.93, 1.06, 0.88, 3.53, 1.74, 0.89, \
+#                  2.28, 2.09, 0.13, 1.96, 3.36, 1.62, 2.04, 1.86, 0]  # ignore the 22nd class
+class_weights = [1]*21 + [0]
 
 def make_list_from_txt(txt_dir):
     """"txt_dir: directory that contains the train, val txt files.
