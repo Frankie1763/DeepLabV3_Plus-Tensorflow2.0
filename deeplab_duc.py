@@ -71,10 +71,10 @@ def DeepLabV3Plus(img_height, img_width, nclasses=21):
     image_features = base_model.get_layer('conv4_block1_out').output
     x_a = ASPP(image_features)  # size=32x32x256
 
-    # x_a = Conv2D(filters=256*16, kernel_size=3, padding='same', activation='relu',
-    #            kernel_initializer='he_normal', name='duc_layer1', use_bias=False)(x_a)  # size =32x32x256x16
-    # x_a = tf.reshape(x_a, [-1, img_height//4, img_width//4, 256])  # size=128x128x256
-    x_a = Upsample(tensor=x_a, size=[img_height // 4, img_width // 4])
+    x_a = Conv2D(filters=256*16, kernel_size=3, padding='same', activation='relu',
+               kernel_initializer='he_normal', name='duc_layer1', use_bias=False)(x_a)  # size =32x32x256x16
+    x_a = tf.nn.depth_to_space(x_a, 4, name="reshape_1")  # size=128x128x256
+    # x_a = Upsample(tensor=x_a, size=[img_height // 4, img_width // 4])
 
     x_b = base_model.get_layer('conv2_block3_out').output
     x_b = Conv2D(filters=48, kernel_size=1, padding='same',
@@ -98,16 +98,8 @@ def DeepLabV3Plus(img_height, img_width, nclasses=21):
     x = Conv2D(filters=16*nclasses, kernel_size=3, padding='same', activation='relu',
                kernel_initializer='he_normal', name='duc_layer2', use_bias=False)(x)
 
-    x = tf.nn.depth_to_space(x, 4, name='reshape')
-    # x = reshape(x, 128, 128, 2)
-    # x = Conv2D(nclasses, (1, 1), name='output_layer')(x)
-    '''
-    x = Activation('softmax')(x) 
-    tf.losses.SparseCategoricalCrossentropy(from_logits=True)
-    Args:
-        from_logits: Whether `y_pred` is expected to be a logits tensor. By default,
-        we assume that `y_pred` encodes a probability distribution.
-    '''
+    x = tf.nn.depth_to_space(x, 4, name='reshape_2')
+
     model = Model(inputs=base_model.input, outputs=x, name='DeepLabV3_Plus')
     print(f'*** Output_Shape => {model.output_shape} ***')
     return model
