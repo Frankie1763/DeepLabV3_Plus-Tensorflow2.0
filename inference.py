@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from PIL import Image
+from PIL import Image,ImageDraw, ImageFont
 
 import argparse
 
@@ -63,12 +63,15 @@ def load_model(model_path):
 def pipeline(image, gt, model, save_img=False, save_dir=None, filename=None):
     global b
     alpha = 0.5
+    dims = image.shape
     image = cv2.resize(image, (W, H))
     gt = cv2.resize(gt, (W, H))
     x = image.copy()
     z = model.predict(preprocess_input(np.expand_dims(x, axis=0)))
     z = np.squeeze(z)
     y = np.argmax(z, axis=2)
+    p_accuracy = pixel_accuracy(y, gt)
+    print(p_accuracy)
 
     img_color = image.copy()
     for i in np.unique(y):
@@ -85,16 +88,17 @@ def pipeline(image, gt, model, save_img=False, save_dir=None, filename=None):
         pixels[j,i] = label_colours[gt[i][j]]
     gt2 = np.array(gt2)
 
+    out = np.concatenate([image/255, img_color/255, gt2/255, disp/255], axis=1)
+    out_img = Image.fromarray((out * 255).astype(np.uint8))  #PIL does not accept float
+    d = ImageDraw.Draw(out_img)
+    fnt = ImageFont.truetype('arial.ttf', 20)
+    d.text((1800,15), "pixel-wise accuracy: "+str(p_accuracy), font=fnt, fill = (255,255,255))
 
     if save_img:
-        out = np.concatenate([image/255, img_color/255, gt2/255, disp/255], axis=1)
-        # cv2.imwrite(save_dir + filename, output)
-        Image.fromarray((out * 255).astype(np.uint8)).save(save_dir+filename)  #PIL does not accept float
+        out_img.save(save_dir+filename)
     else:
         plt.figure(figsize=(20, 10))
-        out = np.concatenate([image/255, img_color/255, gt2/255, disp/255], axis=1)
-
-        # plt.imshow(img_color / 255.0)
+        out = np.array(out_img)
         plt.imshow(out)
     return out
 
@@ -116,6 +120,15 @@ def draw_masks(img_lst, msk_lst, model, output):
         gt = np.array(Image.open(msk_lst[i]))
         pipeline(img, gt, model, filename=img_lst[i][-15:], save_dir=output, save_img=True)
 
+def pixel_accuracy(pred, gt):
+  total = 0
+  correct = 0
+  for i in range(H):
+    for j in range(W):
+      if gt[i][j] == pred[i][j]:
+        correct+=1
+      total+=1
+  return round(correct/total, 2)
 
 def main():
     FLAGS, unparsed = parser.parse_known_args()
