@@ -1,12 +1,14 @@
-import numpy as np
-import matplotlib.pyplot as plt
 from tensorflow.python.keras.models import Model, load_model
 from tensorflow.python.keras.preprocessing.image import load_img, img_to_array
+from tensorflow.keras.applications.resnet50 import preprocess_input
 from deeplab import DeepLabV3Plus
 import tensorflow as tf
 import cv2
+import numpy as np
+import matplotlib.pyplot as plt
 from tqdm import tqdm
-from tensorflow.keras.applications.resnet50 import preprocess_input
+from PIL import Image
+
 import argparse
 
 print('Tensorflow', tf.__version__)
@@ -58,11 +60,11 @@ def load_model(model_path):
     return model
 
 
-def pipeline(image, model, save_img=False, save_dir=None, filename=None):
+def pipeline(image, gt, model, save_img=False, save_dir=None, filename=None):
     global b
     alpha = 0.5
-    dims = image.shape
     image = cv2.resize(image, (W, H))
+    gt = cv2.resize(gt, (W, H))
     x = image.copy()
     z = model.predict(preprocess_input(np.expand_dims(x, axis=0)))
     z = np.squeeze(z)
@@ -70,20 +72,31 @@ def pipeline(image, model, save_img=False, save_dir=None, filename=None):
 
     img_color = image.copy()
     for i in np.unique(y):
-        if i <= 21:  # exclude the boundary pixels
-            img_color[y == i] = label_colours[i]
+      if i <= 21:  # exclude the boundary pixels
+        img_color[y == i] = label_colours[i]
     disp = img_color.copy()
     cv2.addWeighted(image, alpha, img_color, 1 - alpha, 0, img_color)
 
+
+    gt2 = Image.new("RGB",(W, H), 3) # the w, h are exchanged
+    pixels = gt2.load()
+    for i in range(H):
+      for j in range(W):
+        pixels[j,i] = label_colours[gt[i][j]]
+    gt2 = np.array(gt2)
+
+
     if save_img:
-        output = img_color
-        cv2.imwrite(save_dir + filename, output)
+        out = np.concatenate([image/255, img_color/255, gt2/255, disp/255], axis=1)
+        # cv2.imwrite(save_dir + filename, output)
+        Image.fromarray((out * 255).astype(np.uint8)).save(save_dir+filename)  #PIL does not accept float
     else:
         plt.figure(figsize=(20, 10))
-        # out = np.concatenate([image/255, img_color/255, disp/255], axis=1)
+        out = np.concatenate([image/255, img_color/255, gt2/255, disp/255], axis=1)
 
-        plt.imshow(img_color / 255.0)
-        # plt.imshow(out)
+        # plt.imshow(img_color / 255.0)
+        plt.imshow(out)
+    return out
 
 
 def predict_label(model, img_path):
@@ -97,17 +110,18 @@ def predict_label(model, img_path):
     return pred_label
 
 
-def draw_masks(img_lst, model, output):
-    for img_path in tqdm(img_lst):
-        img = img_to_array(load_img(img_path))
-        pipeline(img, model, filename=img_path[-15:], save_dir=output, save_img=True)
+def draw_masks(img_lst, msk_lst, model, output):
+    for i in tqdm(range(len(img_lst))):
+        img = img_to_array(load_img(img_lst[i]))
+        gt = np.array(Image.open(msk_lst[i]))
+        pipeline(img, gt, model, filename=img_lst[i][-15:], save_dir=output, save_img=True)
 
 
 def main():
     FLAGS, unparsed = parser.parse_known_args()
     model = load_model(FLAGS.model)
     img_lst, msk_lst = create_list(FLAGS.img_txt, FLAGS.msk_txt)
-    draw_masks(img_lst, model, FLAGS.output)
+    draw_masks(img_lst, msk_lst, model, FLAGS.output)
 
 
 if __name__ == '__main__':

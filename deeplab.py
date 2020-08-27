@@ -66,7 +66,7 @@ def DeepLabV3Plus(img_height, img_width, nclasses=21):
     base_model = ResNet50(input_shape=(
         img_height, img_width, 3), weights='imagenet', include_top=False)
     
-    image_features = base_model.get_layer('conv4_block6_out').output  # size = 32*32*1024
+    image_features = base_model.get_layer('conv4_block1_out').output  # size = 32*32*1024
     x_a = ASPP(image_features)
     x_a = Upsample(tensor=x_a, size=[img_height // 4, img_width // 4])
 
