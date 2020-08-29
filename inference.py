@@ -61,18 +61,40 @@ def load_model(model_path):
 
 
 def pipeline(image, gt, model, save_img=False, save_dir=None, filename=None):
-    global b
+    # predict
     alpha = 0.5
     dims = image.shape
     image = cv2.resize(image, (W, H))
-    gt = cv2.resize(gt, (W, H))
+    gt = cv2.resize(gt, (W, H), interpolation = cv2.INTER_NEAREST)  # use the nearest pixel instead of bilinear
     x = image.copy()
     z = model.predict(preprocess_input(np.expand_dims(x, axis=0)))
     z = np.squeeze(z)
     y = np.argmax(z, axis=2)
-    p_accuracy = pixel_accuracy(y, gt)
-    print(p_accuracy)
+    p_a = pixel_accuracy(y, gt)
 
+    # iou per object
+    obj_eva = np.zeros((21,3))  # (tp, fp, fn)
+    for i in range(H):
+      for j in range(W):
+        if y[i][j] > 20 or gt[i][j] >20:
+          continue
+        elif gt[i][j] == y[i][j]:
+          # true positive
+          obj_eva[gt[i][j]][0] += 1
+        else:
+          # false negative
+          obj_eva[gt[i][j]][2] += 1
+          # false positive
+          obj_eva[y[i][j]][1] += 1
+    obj_iou = [round(any[0]/sum(any),2) if sum(any)!=0 else 0 for any in obj_eva]
+    total_obj = 0
+    for i in obj_iou:
+      if i!=0:
+        total_obj+=1
+    img_iou = round(sum(obj_iou)/total_obj, 2)
+
+
+    # draw mask on img
     img_color = image.copy()
     for i in np.unique(y):
       if i <= 21:  # exclude the boundary pixels
@@ -80,7 +102,7 @@ def pipeline(image, gt, model, save_img=False, save_dir=None, filename=None):
     disp = img_color.copy()
     cv2.addWeighted(image, alpha, img_color, 1 - alpha, 0, img_color)
 
-
+    # draw mask on gt
     gt2 = Image.new("RGB",(W, H), 3) # the w, h are exchanged
     pixels = gt2.load()
     for i in range(H):
@@ -88,11 +110,12 @@ def pipeline(image, gt, model, save_img=False, save_dir=None, filename=None):
         pixels[j,i] = label_colours[gt[i][j]]
     gt2 = np.array(gt2)
 
+    # concatenate and add text
     out = np.concatenate([image/255, img_color/255, gt2/255, disp/255], axis=1)
     out_img = Image.fromarray((out * 255).astype(np.uint8))  #PIL does not accept float
     d = ImageDraw.Draw(out_img)
-    fnt = ImageFont.truetype('arial.ttf', 20)
-    d.text((1800,15), "pixel-wise accuracy: "+str(p_accuracy), font=fnt, fill = (255,255,255))
+    fnt = ImageFont.truetype('/content/DeepLabV3_Plus-Tensorflow2.0/arial.ttf', 20)
+    d.text((1800,15), "pixel-wise accuracy: "+str(p_a), font=fnt, fill = (255,255,255))
 
     if save_img:
         out_img.save(save_dir+filename)
@@ -100,7 +123,7 @@ def pipeline(image, gt, model, save_img=False, save_dir=None, filename=None):
         plt.figure(figsize=(20, 10))
         out = np.array(out_img)
         plt.imshow(out)
-    return out
+    return p_a, obj_iou, img_iou
 
 
 def predict_label(model, img_path):
@@ -114,11 +137,29 @@ def predict_label(model, img_path):
     return pred_label
 
 
-def draw_masks(img_lst, msk_lst, model, output):
+def inference(img_lst, msk_lst, model, output):
+    p_a_total = 0
+    obj_num = [0]*21
+    result_iou = [0]*21
+    total_iou = 0
     for i in tqdm(range(len(img_lst))):
         img = img_to_array(load_img(img_lst[i]))
         gt = np.array(Image.open(msk_lst[i]))
-        pipeline(img, gt, model, filename=img_lst[i][-15:], save_dir=output, save_img=True)
+        p_a, obj_iou, img_iou = pipeline(img, gt, model, filename=img_lst[i][-15:], save_dir=output, save_img=True)
+        total_iou += img_iou
+        for j in range(len(obj_iou)):
+          if obj_iou[j]!=0:
+            obj_num[j]+=1
+            result_iou[j]+=obj_iou[j]
+    # print(obj_iou)
+    # print(obj_num)
+
+    for i in range(21):
+        if obj_num[i]==0:
+          print("class",i,"no object")
+        else:
+          print("class",i,"iou:",round(result_iou[i]/obj_num[i],2))
+    print("mean iou:", round(total_iou/len(img_lst), 2))
 
 def pixel_accuracy(pred, gt):
   total = 0
@@ -134,7 +175,7 @@ def main():
     FLAGS, unparsed = parser.parse_known_args()
     model = load_model(FLAGS.model)
     img_lst, msk_lst = create_list(FLAGS.img_txt, FLAGS.msk_txt)
-    draw_masks(img_lst, msk_lst, model, FLAGS.output)
+    inference(img_lst, msk_lst, model, FLAGS.output)
 
 
 if __name__ == '__main__':
