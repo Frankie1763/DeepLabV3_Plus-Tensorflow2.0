@@ -86,12 +86,9 @@ def pipeline(image, gt, model, save_img=False, save_dir=None, filename=None):
           obj_eva[gt[i][j]][2] += 1
           # false positive
           obj_eva[y[i][j]][1] += 1
-    obj_iou = [round(any[0]/sum(any),2) if sum(any)!=0 else 0 for any in obj_eva]
-    total_obj = 0
-    for i in obj_iou:
-      if i!=0:
-        total_obj+=1
-    img_iou = round(sum(obj_iou)/total_obj, 2)
+    # obj_iou = [round(any[0]/sum(any),2) if sum(any)!=0 else 0 for any in obj_eva]
+    total = np.sum(obj_eva, axis = 0)
+    img_iou = round(total[0]/sum(total),2)
 
 
     # draw mask on img
@@ -116,6 +113,7 @@ def pipeline(image, gt, model, save_img=False, save_dir=None, filename=None):
     d = ImageDraw.Draw(out_img)
     fnt = ImageFont.truetype('/content/DeepLabV3_Plus-Tensorflow2.0/arial.ttf', 20)
     d.text((1800,15), "pixel-wise accuracy: "+str(p_a), font=fnt, fill = (255,255,255))
+    d.text((1800,40), "image miou: "+str(img_iou), font=fnt, fill = (255,255,255))
 
     if save_img:
         out_img.save(save_dir+filename)
@@ -123,7 +121,7 @@ def pipeline(image, gt, model, save_img=False, save_dir=None, filename=None):
         plt.figure(figsize=(20, 10))
         out = np.array(out_img)
         plt.imshow(out)
-    return p_a, obj_iou, img_iou
+    return p_a, obj_eva
 
 
 def predict_label(model, img_path):
@@ -139,27 +137,24 @@ def predict_label(model, img_path):
 
 def inference(img_lst, msk_lst, model, output):
     p_a_total = 0
-    obj_num = [0]*21
-    result_iou = [0]*21
-    total_iou = 0
+    # obj_num = [0]*21
+    result_eva = np.zeros((21, 3))
     for i in tqdm(range(len(img_lst))):
         img = img_to_array(load_img(img_lst[i]))
         gt = np.array(Image.open(msk_lst[i]))
-        p_a, obj_iou, img_iou = pipeline(img, gt, model, filename=img_lst[i][-15:], save_dir=output, save_img=True)
-        total_iou += img_iou
-        for j in range(len(obj_iou)):
-          if obj_iou[j]!=0:
-            obj_num[j]+=1
-            result_iou[j]+=obj_iou[j]
-    # print(obj_iou)
-    # print(obj_num)
+        p_a, obj_eva = pipeline(img, gt, model, filename=img_lst[i][-15:], save_dir=output, save_img=True)
+        result_eva = np.add(result_eva, obj_eva)
+        p_a_total += p_a
+    print("pixelwise accuracy:", round(p_a_total / len(img_lst), 2))
 
     for i in range(21):
-        if obj_num[i]==0:
-          print("class",i,"no object")
+        if sum(result_eva[i]) == 0:
+            print("class", i, "no object")
         else:
-          print("class",i,"iou:",round(result_iou[i]/obj_num[i],2))
-    print("mean iou:", round(total_iou/len(img_lst), 2))
+            print("class", i, "iou:", round(result_eva[i][0] / sum(result_eva[i]), 2))
+    result_total = np.sum(result_eva, axis=0)
+    print("mean iou:", round(result_total[0] / sum(result_total), 2))
+
 
 def pixel_accuracy(pred, gt):
   total = 0
