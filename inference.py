@@ -1,7 +1,6 @@
 from tensorflow.python.keras.models import Model, load_model
 from tensorflow.python.keras.preprocessing.image import load_img, img_to_array
 from tensorflow.keras.applications.resnet50 import preprocess_input
-from deeplab import DeepLabV3Plus
 import tensorflow as tf
 import cv2
 import numpy as np
@@ -27,6 +26,9 @@ parser.add_argument("--img_txt", type=str,
 parser.add_argument("--msk_txt", type=str,
                     default="/content/drive/My Drive/CS Internship/DeepLab_v3/deeplab_v3_tensorflow_v1/dataset/val_msk_full_path.txt",
                     help="text file that contains full path of test masks")
+parser.add_argument('--backbone', type=str,
+                    default="resnet50",
+                    help='resnet50/resnet101/xception/resnet50_duc')
 
 # global variables
 label_colours = [(0, 0, 0),  # 0=background
@@ -53,7 +55,15 @@ def create_list(img_txt, msk_txt):
     return img_lst, msk_lst
 
 
-def load_model(model_path):
+def load_model(model_path, backbone):
+    if backbone == "resnet50":
+        from deeplab_resnet50 import DeepLabV3Plus
+    # elif model == "resnet101":
+    #     from deeplab_resnet101 import DeepLabV3Plus
+    elif backbone == "xception":
+        from deeplab_xception import DeepLabV3Plus
+    elif backbone == "renet50_duc":
+        from deeplab_resnet50_duc import DeepLabV3Plus
     model = DeepLabV3Plus(H, W, num_classes)
     model.load_weights(model_path)
     print("successfully load model")
@@ -87,9 +97,8 @@ def pipeline(image, gt, model, save_img=False, save_dir=None, filename=None):
           # false positive
           obj_eva[y[i][j]][1] += 1
     # obj_iou = [round(any[0]/sum(any),2) if sum(any)!=0 else 0 for any in obj_eva]
-    total = np.sum(obj_eva, axis = 0)
-    img_iou = round(total[0]/sum(total),2)
-
+    total = np.sum(obj_eva, axis=0)
+    img_iou = round(total[0]/sum(total), 2)
 
     # draw mask on img
     img_color = image.copy()
@@ -137,7 +146,6 @@ def predict_label(model, img_path):
 
 def inference(img_lst, msk_lst, model, output):
     p_a_total = 0
-    # obj_num = [0]*21
     result_eva = np.zeros((21, 3))
     for i in tqdm(range(len(img_lst))):
         img = img_to_array(load_img(img_lst[i]))

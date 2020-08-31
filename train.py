@@ -1,7 +1,7 @@
 import tensorflow as tf
 import argparse
 from tensorflow.keras.callbacks import TensorBoard, ModelCheckpoint
-from deeplab_Xception import DeepLabV3Plus
+# from deeplab_resnet50 import DeepLabV3Plus
 
 print('TensorFlow', tf.__version__)
 
@@ -41,6 +41,9 @@ parser.add_argument('--decay', type=float,
 parser.add_argument('--starting_epoch', type=int,
                     default=1,
                     help='starting_epoch.')
+parser.add_argument('--backbone', type=str,
+                    default="resnet50",
+                    help='resnet50/resnet101/xception/resnet50_duc')
 
 # Global variables
 batch_size = 10
@@ -190,12 +193,17 @@ def weightedLoss(originalLossFunc, weightsList):  # function to set weights on l
 
     return lossFunc
 
-
-def define_model(H, W, num_classes, momentum=0.9997, epsilon=1e-5, learning_rate=1e-2, decay=1e-6):
+def define_model(backbone, H, W, num_classes, momentum=0.9997, epsilon=1e-5, learning_rate=1e-2, decay=1e-6):
+    if backbone == "resnet50":
+        from deeplab_resnet50 import DeepLabV3Plus
+    # elif model == "resnet101":
+    #     from deeplab_resnet101 import DeepLabV3Plus
+    elif backbone == "xception":
+        from deeplab_xception import DeepLabV3Plus
+    elif backbone == "renet50_duc":
+        from deeplab_resnet50_duc import DeepLabV3Plus
     loss = tf.losses.SparseCategoricalCrossentropy(from_logits=True)
     loss = weightedLoss(loss, class_weights)  # use the weighed loss function
-    # strategy = tf.distribute.MirroredStrategy()
-    # with strategy.scope():
     model = DeepLabV3Plus(H, W, num_classes)
     for layer in model.layers:
         if isinstance(layer, tf.keras.layers.BatchNormalization):
@@ -203,12 +211,10 @@ def define_model(H, W, num_classes, momentum=0.9997, epsilon=1e-5, learning_rate
             layer.epsilon = epsilon
         elif isinstance(layer, tf.keras.layers.Conv2D):
             layer.kernel_regularizer = tf.keras.regularizers.l2(1e-4)
-
     model.compile(loss=loss,
                   optimizer=tf.optimizers.Adam(learning_rate=learning_rate, decay=decay),
                   metrics=['accuracy'])
     return model
-
 
 def define_callbacks(tb_logs_path, checkpoint_path, saving_interval=2):
     tb = TensorBoard(log_dir=tb_logs_path, write_graph=True, update_freq='batch')
@@ -228,7 +234,7 @@ def main():
     train_dataset, val_dataset = make_dataset(train_img_list, train_msk_list, val_img_list, val_msk_list)
     print("Successfully made dataset!")
     momentum, epsilon, learning_rate, decay = FLAGS.m, FLAGS.e, FLAGS.lr, FLAGS.decay
-    model = define_model(H, W, num_classes, momentum, epsilon, learning_rate, decay)
+    model = define_model(FLAGS.backbone, H, W, num_classes, momentum, epsilon, learning_rate, decay)
     print("Successfully defined the model!")
     callbacks = define_callbacks(FLAGS.tensorboard_dir, FLAGS.ckpt_dir, FLAGS.saving_interval)
     if FLAGS.restore:  # the restore flag is not None
@@ -245,6 +251,8 @@ def main():
               validation_steps=len(val_img_list) // batch_size,
               initial_epoch=starting_epoch,
               callbacks=callbacks)
+
+
 
 
 if __name__ == '__main__':
