@@ -196,8 +196,8 @@ def weightedLoss(originalLossFunc, weightsList):  # function to set weights on l
 def define_model(backbone, H, W, num_classes, momentum=0.9997, epsilon=1e-5, learning_rate=1e-2, decay=1e-6):
     if backbone == "resnet50":
         from deeplab_resnet50 import DeepLabV3Plus
-    # elif model == "resnet101":
-    #     from deeplab_resnet101 import DeepLabV3Plus
+    elif backbone == "resnet101":
+        from deeplab_resnet101 import DeepLabV3Plus
     elif backbone == "xception":
         from deeplab_xception import DeepLabV3Plus
     elif backbone == "renet50_duc":

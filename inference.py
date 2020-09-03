@@ -58,8 +58,8 @@ def create_list(img_txt, msk_txt):
 def load_model(model_path, backbone):
     if backbone == "resnet50":
         from deeplab_resnet50 import DeepLabV3Plus
-    # elif model == "resnet101":
-    #     from deeplab_resnet101 import DeepLabV3Plus
+    elif backbone == "resnet101":
+        from deeplab_resnet101 import DeepLabV3Plus
     elif backbone == "xception":
         from deeplab_xception import DeepLabV3Plus
     elif backbone == "renet50_duc":
