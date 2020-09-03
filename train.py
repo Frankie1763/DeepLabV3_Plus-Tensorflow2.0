@@ -213,7 +213,7 @@ def define_model(backbone, H, W, num_classes, momentum=0.9997, epsilon=1e-5, lea
             layer.kernel_regularizer = tf.keras.regularizers.l2(1e-4)
     model.compile(loss=loss,
                   optimizer=tf.optimizers.Adam(learning_rate=learning_rate, decay=decay),
-                  metrics=[tf.keras.metrics.MeanIoU()])
+                  metrics=[tf.keras.metrics.MeanIoU(num_classes=20)])
     return model
 
 def define_callbacks(tb_logs_path, checkpoint_path, saving_interval=2):
