@@ -193,6 +193,10 @@ def weightedLoss(originalLossFunc, weightsList):  # function to set weights on l
 
     return lossFunc
 
+class MyMeanIOU(tf.keras.metrics.MeanIoU):
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        return super().update_state(tf.argmax(y_true, axis=-1), tf.argmax(y_pred, axis=-1), sample_weight)
+
 def define_model(backbone, H, W, num_classes, momentum=0.9997, epsilon=1e-5, learning_rate=1e-2, decay=1e-6):
     if backbone == "resnet50":
         from deeplab_resnet50 import DeepLabV3Plus
@@ -213,7 +217,7 @@ def define_model(backbone, H, W, num_classes, momentum=0.9997, epsilon=1e-5, lea
             layer.kernel_regularizer = tf.keras.regularizers.l2(1e-4)
     model.compile(loss=loss,
                   optimizer=tf.optimizers.Adam(learning_rate=learning_rate, decay=decay),
-                  metrics=[tf.keras.metrics.MeanIoU()])
+                  metrics=[MyMeanIOU(num_classes=20)])
     return model
 
 def define_callbacks(tb_logs_path, checkpoint_path, saving_interval=2):
