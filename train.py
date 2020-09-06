@@ -53,7 +53,7 @@ parser.add_argument('--backbone', type=str,
 # Global variables
 batch_size = 7
 H, W = 512, 512
-num_classes = 22  
+num_classes = 22
 _DEPTH = 3
 
 
