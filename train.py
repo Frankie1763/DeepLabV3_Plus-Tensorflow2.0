@@ -208,7 +208,7 @@ class MyWeightedLoss(tf.keras.losses.SparseCategoricalCrossentropy):
         sample_weight = np.zeros((y_pred.shape[0], y_pred.shape[1]))
         for i in range(y_pred.shape[0]):
             for j in range(y_pred.shape[1]):
-                if y_pred[i][j] != 21:
+                if int(y_pred[i][j]) != 21:
                     sample_weight[i][j] = 1
         graph_ctx = tf_utils.graph_context_for_symbolic_tensors(
             y_true, y_pred, sample_weight)
