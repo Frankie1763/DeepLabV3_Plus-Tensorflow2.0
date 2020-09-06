@@ -59,7 +59,7 @@ _DEPTH = 3
 
 # class_weights = [0.07, 1.68, 1.99, 1.48, 2.19, 1.48, 2.57, 0.93, 1.06, 0.88, 3.53, 1.74, 0.89, \
 #                  2.28, 2.09, 0.13, 1.96, 3.36, 1.62, 2.04, 1.86, 0]  # ignore the 22nd class
-# class_weights = [1]*21 + [0]
+class_weights = [1]*21 + [0]
 # class_weight = {0:1., 1:1., 2:1., 3:1., 4:1., 5:1., 6:1., 7:1., 8:1., 9:1., 10:1., 11:1., 12:1., 13:1., 14:1., 15:1., 16:1., 17:1., 18:1., 19:1., 20:1., 21:0.}
 def make_list_from_txt(txt_dir):
     """"txt_dir: directory that contains the train, val txt files.
@@ -202,21 +202,21 @@ def weightedLoss(originalLossFunc, weightsList):  # function to set weights on l
 
 
 # subclass SparseCategoricalCrossentropy to set the weight of class 21 as 0
-class MyWeightedLoss(tf.keras.losses.SparseCategoricalCrossentropy):
-
-    def call(self, y_true, y_pred):
-        sample_weight = np.zeros((y_pred.shape[0], y_pred.shape[1]))
-        for i in range(y_pred.shape[0]):
-            for j in range(y_pred.shape[1]):
-                if int(y_pred[i][j]) != 21:
-                    sample_weight[i][j] = 1
-        graph_ctx = tf_utils.graph_context_for_symbolic_tensors(
-            y_true, y_pred, sample_weight)
-        with K.name_scope(self._name_scope), graph_ctx:
-            ag_call = autograph.tf_convert(self.call, ag_ctx.control_status_ctx())
-            losses = ag_call(y_true, y_pred)
-            return losses_utils.compute_weighted_loss(
-                losses, sample_weight, reduction=self._get_reduction())
+# class MyWeightedLoss(tf.keras.losses.SparseCategoricalCrossentropy):
+#
+#     def call(self, y_true, y_pred):
+#         sample_weight = np.zeros((y_pred.shape[0], y_pred.shape[1]))
+#         for i in range(y_pred.shape[0]):
+#             for j in range(y_pred.shape[1]):
+#                 if int(y_pred[i][j]) != 21:
+#                     sample_weight[i][j] = 1
+#         graph_ctx = tf_utils.graph_context_for_symbolic_tensors(
+#             y_true, y_pred, sample_weight)
+#         with K.name_scope(self._name_scope), graph_ctx:
+#             ag_call = autograph.tf_convert(self.call, ag_ctx.control_status_ctx())
+#             losses = ag_call(y_true, y_pred)
+#             return losses_utils.compute_weighted_loss(
+#                 losses, sample_weight, reduction=self._get_reduction())
 
 
 # define MyMeanIOU to use argmax to preprocess the result
@@ -234,9 +234,9 @@ def define_model(backbone, H, W, num_classes, momentum=0.9997, epsilon=1e-5, lea
         from deeplab_xception import DeepLabV3Plus
     elif backbone == "renet50_duc":
         from deeplab_resnet50_duc import DeepLabV3Plus
-    # loss = tf.losses.SparseCategoricalCrossentropy(from_logits=True)
-    # loss = weightedLoss(loss, class_weights)  # use the weighed loss function
-    loss = MyWeightedLoss(from_logits=True)
+    loss = tf.losses.SparseCategoricalCrossentropy(from_logits=True)
+    loss = weightedLoss(loss, class_weights)  # use the weighed loss function
+    # loss = MyWeightedLoss(from_logits=True)
     model = DeepLabV3Plus(H, W, num_classes)
     for layer in model.layers:
         if isinstance(layer, tf.keras.layers.BatchNormalization):
