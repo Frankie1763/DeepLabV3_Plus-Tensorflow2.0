@@ -53,13 +53,13 @@ parser.add_argument('--backbone', type=str,
 # Global variables
 batch_size = 7
 H, W = 512, 512
-num_classes = 22
+num_classes = 21
 _DEPTH = 3
 
 
 # class_weights = [0.07, 1.68, 1.99, 1.48, 2.19, 1.48, 2.57, 0.93, 1.06, 0.88, 3.53, 1.74, 0.89, \
 #                  2.28, 2.09, 0.13, 1.96, 3.36, 1.62, 2.04, 1.86, 0]  # ignore the 22nd class
-class_weights = [1]*21 + [0]
+# class_weights = [1]*21 + [0]
 # class_weight = {0:1., 1:1., 2:1., 3:1., 4:1., 5:1., 6:1., 7:1., 8:1., 9:1., 10:1., 11:1., 12:1., 13:1., 14:1., 15:1., 16:1., 17:1., 18:1., 19:1., 20:1., 21:0.}
 def make_list_from_txt(txt_dir):
     """"txt_dir: directory that contains the train, val txt files.
@@ -161,43 +161,43 @@ def make_dataset(train_img_list, train_msk_list, val_img_list, val_msk_list):
     return train_dataset, val_dataset
 
 
-def weightedLoss(originalLossFunc, weightsList):  # function to set weights on loss function
-    def lossFunc(true, pred):
-        axis = -1  # if channels last
-        # axis=  1 #if channels first
-
-        # argmax returns the index of the element with the greatest value
-        # done in the class axis, it returns the class index
-        # if your loss is sparse, use only true as classSelectors
-        classSelectors = tf.keras.backend.argmax(true, axis=axis)
-
-        # considering weights are ordered by class, for each class
-        # true(1) if the class index is equal to the weight index
-        classSelectors = [tf.keras.backend.equal(tf.cast(i, tf.int64), tf.cast(classSelectors, tf.int64)) for i in
-                          range(len(weightsList))]
-
-        # casting boolean to float for calculations
-        # each tensor in the list contains 1 where ground true class is equal to its index
-        # if you sum all these, you will get a tensor full of ones.
-        classSelectors = [tf.keras.backend.cast(x, tf.int64) for x in classSelectors]
-
-        # for each of the selections above, multiply their respective weight
-        weights = [tf.cast(sel, tf.float32) * tf.cast(w, tf.float32) for sel, w in zip(classSelectors, weightsList)]
-
-        # sums all the selections
-        # result is a tensor with the respective weight for each element in predictions
-        weightMultiplier = weights[0]
-        for i in range(1, len(weights)):
-            weightMultiplier = weightMultiplier + weights[i]
-
-        # make sure your originalLossFunc only collapses the class axis
-        # you need the other axes intact to multiply the weights tensor
-        loss = originalLossFunc(true, pred)
-        loss = tf.cast(loss, tf.float32) * tf.cast(weightMultiplier, tf.float32)
-
-        return loss
-
-    return lossFunc
+# def weightedLoss(originalLossFunc, weightsList):  # function to set weights on loss function
+#     def lossFunc(true, pred):
+#         axis = -1  # if channels last
+#         # axis=  1 #if channels first
+#
+#         # argmax returns the index of the element with the greatest value
+#         # done in the class axis, it returns the class index
+#         # if your loss is sparse, use only true as classSelectors
+#         classSelectors = tf.keras.backend.argmax(true, axis=axis)
+#
+#         # considering weights are ordered by class, for each class
+#         # true(1) if the class index is equal to the weight index
+#         classSelectors = [tf.keras.backend.equal(tf.cast(i, tf.int64), tf.cast(classSelectors, tf.int64)) for i in
+#                           range(len(weightsList))]
+#
+#         # casting boolean to float for calculations
+#         # each tensor in the list contains 1 where ground true class is equal to its index
+#         # if you sum all these, you will get a tensor full of ones.
+#         classSelectors = [tf.keras.backend.cast(x, tf.int64) for x in classSelectors]
+#
+#         # for each of the selections above, multiply their respective weight
+#         weights = [tf.cast(sel, tf.float32) * tf.cast(w, tf.float32) for sel, w in zip(classSelectors, weightsList)]
+#
+#         # sums all the selections
+#         # result is a tensor with the respective weight for each element in predictions
+#         weightMultiplier = weights[0]
+#         for i in range(1, len(weights)):
+#             weightMultiplier = weightMultiplier + weights[i]
+#
+#         # make sure your originalLossFunc only collapses the class axis
+#         # you need the other axes intact to multiply the weights tensor
+#         loss = originalLossFunc(true, pred)
+#         loss = tf.cast(loss, tf.float32) * tf.cast(weightMultiplier, tf.float32)
+#
+#         return loss
+#
+#     return lossFunc
 
 
 # subclass SparseCategoricalCrossentropy to set the weight of class 21 as 0
@@ -234,7 +234,7 @@ def define_model(backbone, H, W, num_classes, momentum=0.9997, epsilon=1e-5, lea
     elif backbone == "renet50_duc":
         from deeplab_resnet50_duc import DeepLabV3Plus
     loss = tf.losses.SparseCategoricalCrossentropy(from_logits=True)
-    loss = weightedLoss(loss, class_weights)  # use the weighed loss function
+    # loss = weightedLoss(loss, class_weights)  # use the weighed loss function
     # loss = MyWeightedLoss(from_logits=True)
     model = DeepLabV3Plus(H, W, num_classes)
     for layer in model.layers:
