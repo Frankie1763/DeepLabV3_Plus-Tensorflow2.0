@@ -221,7 +221,7 @@ def make_dataset(train_img_list, train_msk_list, val_img_list, val_msk_list):
 # define MyMeanIOU to use argmax to preprocess the result
 class MyMeanIOU(tf.keras.metrics.MeanIoU):
     def update_state(self, y_true, y_pred, sample_weight=None):
-        return super().update_state(tf.argmax(y_true, axis=-1), tf.argmax(y_pred, axis=-1), sample_weight)
+        return super().update_state(y_true, tf.argmax(y_pred, axis=-1), sample_weight)
 
 
 def define_model(backbone, H, W, num_classes, momentum=0.9997, epsilon=1e-5, learning_rate=1e-2, decay=1e-6):
