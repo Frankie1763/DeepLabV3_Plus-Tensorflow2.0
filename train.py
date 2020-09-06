@@ -205,7 +205,7 @@ def weightedLoss(originalLossFunc, weightsList):  # function to set weights on l
 class MyWeightedLoss(tf.keras.losses.SparseCategoricalCrossentropy):
 
     def call(self, y_true, y_pred):
-        sample_weight = np.zeros((tf.shape(y_pred)[0], tf.shape(y_pred)[1]))
+        sample_weight = np.zeros((y_pred.shape[0], y_pred.shape[1]))
         for i in range(sample_weight):
             for j in range(sample_weight[0]):
                 if y_pred[i][j] != 21:
