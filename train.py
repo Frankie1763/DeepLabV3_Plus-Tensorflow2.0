@@ -1,7 +1,12 @@
 import tensorflow as tf
+import numpy as np
 import argparse
 from tensorflow.keras.callbacks import TensorBoard, ModelCheckpoint
-# from deeplab_resnet50 import DeepLabV3Plus
+from tensorflow.python.autograph.core import ag_ctx
+from tensorflow.python.autograph.impl import api as autograph
+from tensorflow.python.keras import backend as K
+from tensorflow.python.keras.utils import losses_utils
+from tensorflow.python.keras.utils import tf_utils
 
 print('TensorFlow', tf.__version__)
 
@@ -162,8 +167,10 @@ def weightedLoss(originalLossFunc, weightsList):  # function to set weights on l
 
         # argmax returns the index of the element with the greatest value
         # done in the class axis, it returns the class index
-        classSelectors = tf.keras.backend.argmax(true, axis=axis)
         # if your loss is sparse, use only true as classSelectors
+        classSelectors = True
+        # classSelectors = tf.keras.backend.argmax(true, axis=axis)
+
 
         # considering weights are ordered by class, for each class
         # true(1) if the class index is equal to the weight index
@@ -193,6 +200,24 @@ def weightedLoss(originalLossFunc, weightsList):  # function to set weights on l
 
     return lossFunc
 
+# subclass SparseCategoricalCrossentropy to set the weight of class 21 as 0
+class MyWeightedLoss(tf.keras.losses.SparseCategoricalCrossentropy):
+
+    def call(self, y_true, y_pred):
+        sample_weight = np.zeros((np.array(y_true).shape[0],np.array(y_true).shape[1]))
+        for i in range(sample_weight):
+          for j in range(sample_weight[0]):
+              if y_pred[i][j] != 21:
+                  sample_weight[i][j] = 1
+        graph_ctx = tf_utils.graph_context_for_symbolic_tensors(
+            y_true, y_pred, sample_weight)
+        with K.name_scope(self._name_scope), graph_ctx:
+            ag_call = autograph.tf_convert(self.call, ag_ctx.control_status_ctx())
+            losses = ag_call(y_true, y_pred)
+            return losses_utils.compute_weighted_loss(
+                losses, sample_weight, reduction=self._get_reduction())
+
+
 # define MyMeanIOU to use argmax to preprocess the result
 class MyMeanIOU(tf.keras.metrics.MeanIoU):
     def update_state(self, y_true, y_pred, sample_weight=None):
@@ -207,8 +232,9 @@ def define_model(backbone, H, W, num_classes, momentum=0.9997, epsilon=1e-5, lea
         from deeplab_xception import DeepLabV3Plus
     elif backbone == "renet50_duc":
         from deeplab_resnet50_duc import DeepLabV3Plus
-    loss = tf.losses.SparseCategoricalCrossentropy(from_logits=True)
+    # loss = tf.losses.SparseCategoricalCrossentropy(from_logits=True)
     # loss = weightedLoss(loss, class_weights)  # use the weighed loss function
+    loss = MyWeightedLoss(from_logits=True)
     model = DeepLabV3Plus(H, W, num_classes)
     for layer in model.layers:
         if isinstance(layer, tf.keras.layers.BatchNormalization):
