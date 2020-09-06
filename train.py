@@ -46,15 +46,15 @@ parser.add_argument('--backbone', type=str,
                     help='resnet50/resnet101/xception/resnet50_duc')
 
 # Global variables
-batch_size = 10
+batch_size = 7
 H, W = 512, 512
 num_classes = 22  # including background and the boundary pixels
 _DEPTH = 3
 
 # class_weights = [0.07, 1.68, 1.99, 1.48, 2.19, 1.48, 2.57, 0.93, 1.06, 0.88, 3.53, 1.74, 0.89, \
 #                  2.28, 2.09, 0.13, 1.96, 3.36, 1.62, 2.04, 1.86, 0]  # ignore the 22nd class
-class_weights = [1]*21 + [0]
-
+# class_weights = [1]*21 + [0]
+class_weight = {0:1., 1:1., 2:1., 3:1., 4:1., 5:1., 6:1., 7:1., 8:1., 9:1., 10:1., 11:1., 12:1., 13:1., 14:1., 15:1., 16:1., 17:1., 18:1., 19:1., 20:1., 21:0.}
 def make_list_from_txt(txt_dir):
     """"txt_dir: directory that contains the train, val txt files.
         return: lists of file paths of train/val image data."""
@@ -193,6 +193,7 @@ def weightedLoss(originalLossFunc, weightsList):  # function to set weights on l
 
     return lossFunc
 
+# define MyMeanIOU to use argmax to preprocess the result
 class MyMeanIOU(tf.keras.metrics.MeanIoU):
     def update_state(self, y_true, y_pred, sample_weight=None):
         return super().update_state(tf.argmax(y_true, axis=-1), tf.argmax(y_pred, axis=-1), sample_weight)
@@ -207,7 +208,7 @@ def define_model(backbone, H, W, num_classes, momentum=0.9997, epsilon=1e-5, lea
     elif backbone == "renet50_duc":
         from deeplab_resnet50_duc import DeepLabV3Plus
     loss = tf.losses.SparseCategoricalCrossentropy(from_logits=True)
-    loss = weightedLoss(loss, class_weights)  # use the weighed loss function
+    # loss = weightedLoss(loss, class_weights)  # use the weighed loss function
     model = DeepLabV3Plus(H, W, num_classes)
     for layer in model.layers:
         if isinstance(layer, tf.keras.layers.BatchNormalization):
@@ -254,6 +255,7 @@ def main():
               validation_data=val_dataset,
               validation_steps=len(val_img_list) // batch_size,
               initial_epoch=starting_epoch,
+              class_weight=class_weight,
               callbacks=callbacks)
 
 
