@@ -53,7 +53,7 @@ parser.add_argument('--backbone', type=str,
 # Global variables
 batch_size = 7
 H, W = 512, 512
-num_classes = 22  # including background and the boundary pixels
+num_classes = 21  # including background class
 _DEPTH = 3
 
 # class_weights = [0.07, 1.68, 1.99, 1.48, 2.19, 1.48, 2.57, 0.93, 1.06, 0.88, 3.53, 1.74, 0.89, \
