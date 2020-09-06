@@ -169,8 +169,8 @@ def weightedLoss(originalLossFunc, weightsList):  # function to set weights on l
         # argmax returns the index of the element with the greatest value
         # done in the class axis, it returns the class index
         # if your loss is sparse, use only true as classSelectors
-        classSelectors = True
-        # classSelectors = tf.keras.backend.argmax(true, axis=axis)
+        # classSelectors = True
+        classSelectors = tf.keras.backend.argmax(true, axis=axis)
 
         # considering weights are ordered by class, for each class
         # true(1) if the class index is equal to the weight index
