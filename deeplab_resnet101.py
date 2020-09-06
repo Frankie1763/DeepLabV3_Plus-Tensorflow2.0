@@ -91,7 +91,7 @@ def DeepLabV3Plus(img_height, img_width, nclasses=21):
     x = Upsample(x, [img_height, img_width])
 
     x = Conv2D(nclasses, (1, 1), name='output_layer')(x)
-    x = np.argmax(np.squeeze(x), axis=2)
+    x = tf.math.argmax(x, axis=2)
     '''
     x = Activation('softmax')(x) 
     tf.losses.SparseCategoricalCrossentropy(from_logits=True)
