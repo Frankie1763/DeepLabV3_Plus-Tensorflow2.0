@@ -53,7 +53,7 @@ parser.add_argument('--backbone', type=str,
 # Global variables
 batch_size = 7
 H, W = 512, 512
-num_classes = 21  # including background class
+num_classes = 22  
 _DEPTH = 3
 
 
@@ -169,7 +169,6 @@ def weightedLoss(originalLossFunc, weightsList):  # function to set weights on l
         # argmax returns the index of the element with the greatest value
         # done in the class axis, it returns the class index
         # if your loss is sparse, use only true as classSelectors
-        # classSelectors = True
         classSelectors = tf.keras.backend.argmax(true, axis=axis)
 
         # considering weights are ordered by class, for each class
