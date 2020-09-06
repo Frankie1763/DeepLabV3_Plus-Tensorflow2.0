@@ -56,6 +56,7 @@ H, W = 512, 512
 num_classes = 21  # including background class
 _DEPTH = 3
 
+
 # class_weights = [0.07, 1.68, 1.99, 1.48, 2.19, 1.48, 2.57, 0.93, 1.06, 0.88, 3.53, 1.74, 0.89, \
 #                  2.28, 2.09, 0.13, 1.96, 3.36, 1.62, 2.04, 1.86, 0]  # ignore the 22nd class
 # class_weights = [1]*21 + [0]
@@ -171,7 +172,6 @@ def weightedLoss(originalLossFunc, weightsList):  # function to set weights on l
         classSelectors = True
         # classSelectors = tf.keras.backend.argmax(true, axis=axis)
 
-
         # considering weights are ordered by class, for each class
         # true(1) if the class index is equal to the weight index
         classSelectors = [tf.keras.backend.equal(tf.cast(i, tf.int64), tf.cast(classSelectors, tf.int64)) for i in
@@ -183,7 +183,7 @@ def weightedLoss(originalLossFunc, weightsList):  # function to set weights on l
         classSelectors = [tf.keras.backend.cast(x, tf.int64) for x in classSelectors]
 
         # for each of the selections above, multiply their respective weight
-        weights = [tf.cast(sel,tf.float32) * tf.cast(w,tf.float32) for sel, w in zip(classSelectors, weightsList)]
+        weights = [tf.cast(sel, tf.float32) * tf.cast(w, tf.float32) for sel, w in zip(classSelectors, weightsList)]
 
         # sums all the selections
         # result is a tensor with the respective weight for each element in predictions
@@ -200,15 +200,16 @@ def weightedLoss(originalLossFunc, weightsList):  # function to set weights on l
 
     return lossFunc
 
+
 # subclass SparseCategoricalCrossentropy to set the weight of class 21 as 0
 class MyWeightedLoss(tf.keras.losses.SparseCategoricalCrossentropy):
 
     def call(self, y_true, y_pred):
-        sample_weight = np.zeros((np.array(y_true).shape[0],np.array(y_true).shape[1]))
+        sample_weight = np.zeros((tf.shape(y_pred)[0], tf.shape(y_pred)[1]))
         for i in range(sample_weight):
-          for j in range(sample_weight[0]):
-              if y_pred[i][j] != 21:
-                  sample_weight[i][j] = 1
+            for j in range(sample_weight[0]):
+                if y_pred[i][j] != 21:
+                    sample_weight[i][j] = 1
         graph_ctx = tf_utils.graph_context_for_symbolic_tensors(
             y_true, y_pred, sample_weight)
         with K.name_scope(self._name_scope), graph_ctx:
@@ -222,6 +223,7 @@ class MyWeightedLoss(tf.keras.losses.SparseCategoricalCrossentropy):
 class MyMeanIOU(tf.keras.metrics.MeanIoU):
     def update_state(self, y_true, y_pred, sample_weight=None):
         return super().update_state(tf.argmax(y_true, axis=-1), tf.argmax(y_pred, axis=-1), sample_weight)
+
 
 def define_model(backbone, H, W, num_classes, momentum=0.9997, epsilon=1e-5, learning_rate=1e-2, decay=1e-6):
     if backbone == "resnet50":
@@ -246,6 +248,7 @@ def define_model(backbone, H, W, num_classes, momentum=0.9997, epsilon=1e-5, lea
                   optimizer=tf.optimizers.Adam(learning_rate=learning_rate, decay=decay),
                   metrics=[MyMeanIOU(num_classes=21)])
     return model
+
 
 def define_callbacks(tb_logs_path, checkpoint_path, saving_interval=2):
     tb = TensorBoard(log_dir=tb_logs_path, write_graph=True, update_freq='batch')
@@ -282,8 +285,6 @@ def main():
               validation_steps=len(val_img_list) // batch_size,
               initial_epoch=starting_epoch,
               callbacks=callbacks)
-
-
 
 
 if __name__ == '__main__':
