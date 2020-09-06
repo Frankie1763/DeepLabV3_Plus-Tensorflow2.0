@@ -59,7 +59,7 @@ _DEPTH = 3
 # class_weights = [0.07, 1.68, 1.99, 1.48, 2.19, 1.48, 2.57, 0.93, 1.06, 0.88, 3.53, 1.74, 0.89, \
 #                  2.28, 2.09, 0.13, 1.96, 3.36, 1.62, 2.04, 1.86, 0]  # ignore the 22nd class
 # class_weights = [1]*21 + [0]
-class_weight = {0:1., 1:1., 2:1., 3:1., 4:1., 5:1., 6:1., 7:1., 8:1., 9:1., 10:1., 11:1., 12:1., 13:1., 14:1., 15:1., 16:1., 17:1., 18:1., 19:1., 20:1., 21:0.}
+# class_weight = {0:1., 1:1., 2:1., 3:1., 4:1., 5:1., 6:1., 7:1., 8:1., 9:1., 10:1., 11:1., 12:1., 13:1., 14:1., 15:1., 16:1., 17:1., 18:1., 19:1., 20:1., 21:0.}
 def make_list_from_txt(txt_dir):
     """"txt_dir: directory that contains the train, val txt files.
         return: lists of file paths of train/val image data."""
@@ -281,7 +281,6 @@ def main():
               validation_data=val_dataset,
               validation_steps=len(val_img_list) // batch_size,
               initial_epoch=starting_epoch,
-              class_weight=class_weight,
               callbacks=callbacks)
 
 
