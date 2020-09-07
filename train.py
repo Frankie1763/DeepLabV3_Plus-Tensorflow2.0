@@ -53,7 +53,7 @@ parser.add_argument('--backbone', type=str,
 # Global variables
 batch_size = 7
 H, W = 512, 512
-num_classes = 21
+num_classes = 22
 _DEPTH = 3
 
 
@@ -161,66 +161,71 @@ def make_dataset(train_img_list, train_msk_list, val_img_list, val_msk_list):
     return train_dataset, val_dataset
 
 
-# def weightedLoss(originalLossFunc, weightsList):  # function to set weights on loss function
-#     def lossFunc(true, pred):
-#         axis = -1  # if channels last
-#         # axis=  1 #if channels first
-#
-#         # argmax returns the index of the element with the greatest value
-#         # done in the class axis, it returns the class index
-#         # if your loss is sparse, use only true as classSelectors
-#         classSelectors = tf.keras.backend.argmax(true, axis=axis)
-#
-#         # considering weights are ordered by class, for each class
-#         # true(1) if the class index is equal to the weight index
-#         classSelectors = [tf.keras.backend.equal(tf.cast(i, tf.int64), tf.cast(classSelectors, tf.int64)) for i in
-#                           range(len(weightsList))]
-#
-#         # casting boolean to float for calculations
-#         # each tensor in the list contains 1 where ground true class is equal to its index
-#         # if you sum all these, you will get a tensor full of ones.
-#         classSelectors = [tf.keras.backend.cast(x, tf.int64) for x in classSelectors]
-#
-#         # for each of the selections above, multiply their respective weight
-#         weights = [tf.cast(sel, tf.float32) * tf.cast(w, tf.float32) for sel, w in zip(classSelectors, weightsList)]
-#
-#         # sums all the selections
-#         # result is a tensor with the respective weight for each element in predictions
-#         weightMultiplier = weights[0]
-#         for i in range(1, len(weights)):
-#             weightMultiplier = weightMultiplier + weights[i]
-#
-#         # make sure your originalLossFunc only collapses the class axis
-#         # you need the other axes intact to multiply the weights tensor
-#         loss = originalLossFunc(true, pred)
-#         loss = tf.cast(loss, tf.float32) * tf.cast(weightMultiplier, tf.float32)
-#
-#         return loss
-#
-#     return lossFunc
+def weightedLoss(originalLossFunc, weightsList):  # function to set weights on loss function
+    def lossFunc(true, pred):
+        axis = -1  # if channels last
+        # axis=  1 #if channels first
+
+        # argmax returns the index of the element with the greatest value
+        # done in the class axis, it returns the class index
+        # if your loss is sparse, use only true as classSelectors
+        classSelectors = tf.keras.backend.argmax(true, axis=axis)
+
+        # considering weights are ordered by class, for each class
+        # true(1) if the class index is equal to the weight index
+        classSelectors = [tf.keras.backend.equal(tf.cast(i, tf.int64), tf.cast(classSelectors, tf.int64)) for i in
+                          range(len(weightsList))]
+
+        # casting boolean to float for calculations
+        # each tensor in the list contains 1 where ground true class is equal to its index
+        # if you sum all these, you will get a tensor full of ones.
+        classSelectors = [tf.keras.backend.cast(x, tf.int64) for x in classSelectors]
+
+        # for each of the selections above, multiply their respective weight
+        weights = [tf.cast(sel, tf.float32) * tf.cast(w, tf.float32) for sel, w in zip(classSelectors, weightsList)]
+
+        # sums all the selections
+        # result is a tensor with the respective weight for each element in predictions
+        weightMultiplier = weights[0]
+        for i in range(1, len(weights)):
+            weightMultiplier = weightMultiplier + weights[i]
+
+        # make sure your originalLossFunc only collapses the class axis
+        # you need the other axes intact to multiply the weights tensor
+        loss = originalLossFunc(true, pred)
+        loss = tf.cast(loss, tf.float32) * tf.cast(weightMultiplier, tf.float32)
+
+        return loss
+
+    return lossFunc
 
 
-# subclass SparseCategoricalCrossentropy to set the weight of class 21 as 0
-# class MyWeightedLoss(tf.keras.losses.SparseCategoricalCrossentropy):
-#
-#     def call(self, y_true, y_pred):
-#         sample_weight = np.zeros((y_pred.shape[0], y_pred.shape[1]))
-#         for i in range(y_pred.shape[0]):
-#             for j in range(y_pred.shape[1]):
-#                 if int(y_pred[i][j]) != 21:
-#                     sample_weight[i][j] = 1
-#         graph_ctx = tf_utils.graph_context_for_symbolic_tensors(
-#             y_true, y_pred, sample_weight)
-#         with K.name_scope(self._name_scope), graph_ctx:
-#             ag_call = autograph.tf_convert(self.call, ag_ctx.control_status_ctx())
-#             losses = ag_call(y_true, y_pred)
-#             return losses_utils.compute_weighted_loss(
-#                 losses, sample_weight, reduction=self._get_reduction())
+# subclass SparseCategoricalCrossentropy to set the weight of class 22 as 0
+class MyWeightedLoss(tf.keras.losses.SparseCategoricalCrossentropy):
+
+    def call(self, y_true, y_pred):
+        sample_weight = np.zeros((y_pred.shape[0], y_pred.shape[1]))
+        for i in range(y_true.shape[0]):
+            for j in range(y_true.shape[1]):
+                if int(y_true[i][j]) != 21:
+                    sample_weight[i][j] = 1
+        graph_ctx = tf_utils.graph_context_for_symbolic_tensors(
+            y_true, y_pred, sample_weight)
+        with K.name_scope(self._name_scope), graph_ctx:
+            ag_call = autograph.tf_convert(self.call, ag_ctx.control_status_ctx())
+            losses = ag_call(y_true, y_pred)
+            return losses_utils.compute_weighted_loss(
+                losses, sample_weight, reduction=self._get_reduction())
 
 
 # define MyMeanIOU to use argmax to preprocess the result
 class MyMeanIOU(tf.keras.metrics.MeanIoU):
     def update_state(self, y_true, y_pred, sample_weight=None):
+        sample_weight = np.zeros((y_pred.shape[0], y_pred.shape[1]))
+        for i in range(y_true.shape[0]):
+            for j in range(y_true.shape[1]):
+                if int(y_true[i][j]) != 21:
+                    sample_weight[i][j] = 1
         return super().update_state(y_true, tf.argmax(y_pred, axis=-1), sample_weight)
 
 
@@ -233,9 +238,9 @@ def define_model(backbone, H, W, num_classes, momentum=0.9997, epsilon=1e-5, lea
         from deeplab_xception import DeepLabV3Plus
     elif backbone == "renet50_duc":
         from deeplab_resnet50_duc import DeepLabV3Plus
-    loss = tf.losses.SparseCategoricalCrossentropy(from_logits=True)
+    # loss = tf.losses.SparseCategoricalCrossentropy(from_logits=True)
     # loss = weightedLoss(loss, class_weights)  # use the weighed loss function
-    # loss = MyWeightedLoss(from_logits=True)
+    loss = MyWeightedLoss(from_logits=True)
     model = DeepLabV3Plus(H, W, num_classes)
     for layer in model.layers:
         if isinstance(layer, tf.keras.layers.BatchNormalization):
