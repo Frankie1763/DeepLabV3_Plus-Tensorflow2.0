@@ -199,18 +199,57 @@ def weightedLoss(originalLossFunc, weightsList):  # function to set weights on l
 
     return lossFunc
 
+# def get_loss(self, labels):
+#     # process ground truth label, only keep valid ones
+#     labels = tf.squeeze(labels, axis=3)  # reduce the channel dimension.
+#     labels_flat = tf.reshape(labels, [-1, ])
+#     valid_indices = tf.to_int32(labels_flat <= self.params['num_classes'] - 1)
+#     valid_labels = tf.dynamic_partition(labels_flat, valid_indices, num_partitions=2)[1]
+#
+#     logits_by_num_classes = tf.reshape(self.output_dict['logits'], [-1, self.params['num_classes']])
+#     valid_logits = tf.dynamic_partition(logits_by_num_classes, valid_indices, num_partitions=2)[1]
+#
+#     preds_flat = tf.reshape(self.output_dict['pred_classes'], [-1, ])
+#     valid_preds = tf.dynamic_partition(preds_flat, valid_indices, num_partitions=2)[1]
+#     confusion_matrix = tf.confusion_matrix(valid_labels, valid_preds, num_classes=self.params['num_classes'])
+#
+#     self.output_dict['valid_preds'] = valid_preds
+#     self.output_dict['valid_labels'] = valid_labels
+#     self.output_dict['confusion_matrix'] = confusion_matrix
+#
+#     cross_entropy = tf.losses.sparse_softmax_cross_entropy(logits=valid_logits, labels=valid_labels)
+#     # Create a tensor named cross_entropy for logging purposes.
+#     # tf.identity(cross_entropy, name='cross_entropy')
+#     tf.summary.scalar('cross_entropy', cross_entropy)
+#
+#     # Add weight decay to the loss.
+#     with tf.variable_scope("total_loss"):
+#         loss = cross_entropy + self.params.get('weight_decay', _WEIGHT_DECAY) * tf.add_n(
+#             [tf.nn.l2_loss(v) for v in self.train_var_list])
+#         # loss = tf.losses.get_total_loss()  # obtain the regularization losses as well
+#     self.loss = loss
+
 
 # subclass SparseCategoricalCrossentropy to set the weight of class 22 as 0
 class MyWeightedLoss(tf.keras.losses.SparseCategoricalCrossentropy):
+    def call(self, y_true, y_pred, sample_weight=None):
+        # sample_weight = np.zeros((y_pred.shape[0], y_pred.shape[1]))
+        # for i in range(y_true.shape[0]):
+        #     for j in range(y_true.shape[1]):
+        #         if int(y_true[i][j]) != 21:
+        #             sample_weight[i][j] = 1
 
-    def call(self, y_true, y_pred):
-        sample_weight = np.zeros((y_pred.shape[0], y_pred.shape[1]))
-        for i in range(y_true.shape[0]):
-            for j in range(y_true.shape[1]):
-                if int(y_true[i][j]) != 21:
-                    sample_weight[i][j] = 1
+        # get valid y_true
+        y_true_flat = tf.reshape(y_true, [-1, ])
+        valid_indices = tf.compat.v1.to_int32(y_true_flat <= num_classes-1)
+        valid_labels = tf.dynamic_partition(y_true_flat, valid_indices, num_partitions=2)[1]
+
+        # get valid logits
+        logits_by_num_classes = tf.reshape(y_pred, [-1, num_classes])
+        valid_logits = tf.dynamic_partition(logits_by_num_classes, valid_indices, num_partitions=2)[1]
+
         graph_ctx = tf_utils.graph_context_for_symbolic_tensors(
-            y_true, y_pred, sample_weight)
+            valid_labels, valid_logits, sample_weight)
         with K.name_scope(self._name_scope), graph_ctx:
             ag_call = autograph.tf_convert(self.call, ag_ctx.control_status_ctx())
             losses = ag_call(y_true, y_pred)
@@ -221,12 +260,14 @@ class MyWeightedLoss(tf.keras.losses.SparseCategoricalCrossentropy):
 # define MyMeanIOU to use argmax to preprocess the result
 class MyMeanIOU(tf.keras.metrics.MeanIoU):
     def update_state(self, y_true, y_pred, sample_weight=None):
-        sample_weight = np.zeros((y_pred.shape[0], y_pred.shape[1]))
-        for i in range(y_true.shape[0]):
-            for j in range(y_true.shape[1]):
-                if int(y_true[i][j]) != 21:
-                    sample_weight[i][j] = 1
-        return super().update_state(y_true, tf.argmax(y_pred, axis=-1), sample_weight)
+        y_true_flat = tf.reshape(y_true, [-1, ])
+        valid_indices = tf.compat.v1.to_int32(y_true_flat <= num_classes - 1)
+        valid_labels = tf.dynamic_partition(y_true_flat, valid_indices, num_partitions=2)[1]
+
+        y_pred = tf.argmax(y_pred, axis=-1)
+        y_pred_flat = tf.reshape(y_pred, [-1, ])
+        valid_preds = tf.dynamic_partition(y_pred_flat, valid_indices, num_partitions=2)[1]
+        return super().update_state(valid_labels, valid_preds, sample_weight)
 
 
 def define_model(backbone, H, W, num_classes, momentum=0.9997, epsilon=1e-5, learning_rate=1e-2, decay=1e-6):
