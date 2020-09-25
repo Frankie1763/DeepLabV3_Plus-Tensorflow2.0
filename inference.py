@@ -69,6 +69,17 @@ def load_model(model_path, backbone):
     print("successfully load model")
     return model
 
+# define MyMeanIOU to use argmax to preprocess the result
+class MyMeanIOU(tf.keras.metrics.MeanIoU):
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        y_true_flat = tf.reshape(y_true, [-1, ])
+        valid_indices = tf.compat.v1.to_int32(y_true_flat <= num_classes - 1)
+        valid_labels = tf.dynamic_partition(y_true_flat, valid_indices, num_partitions=2)[1]
+
+        y_pred = tf.argmax(y_pred, axis=-1)
+        y_pred_flat = tf.reshape(y_pred, [-1, ])
+        valid_preds = tf.dynamic_partition(y_pred_flat, valid_indices, num_partitions=2)[1]
+        return super().update_state(valid_labels, valid_preds)
 
 def pipeline(image, gt, model, save_img=False, save_dir=None, filename=None):
     # predict
@@ -82,6 +93,9 @@ def pipeline(image, gt, model, save_img=False, save_dir=None, filename=None):
     y = np.argmax(z, axis=2)
     p_a = pixel_accuracy(y, gt)
 
+    m = MyMeanIOU(num_classes=21)
+    m.update_state(gt, z)
+    img_iou = round(m.result().numpy(),2)
     # iou per object
     obj_eva = np.zeros((21,3))  # (tp, fp, fn)
     for i in range(H):
@@ -97,8 +111,8 @@ def pipeline(image, gt, model, save_img=False, save_dir=None, filename=None):
           # false positive
           obj_eva[y[i][j]][1] += 1
     # obj_iou = [round(any[0]/sum(any),2) if sum(any)!=0 else 0 for any in obj_eva]
-    total = np.sum(obj_eva, axis=0)
-    img_iou = round(total[0]/sum(total), 2)
+    # total = np.sum(obj_eva, axis=0)
+    # img_iou = round(total[0]/sum(total), 2)
 
     # draw mask on img
     img_color = image.copy()
