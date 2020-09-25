@@ -43,7 +43,7 @@ label_colours = [(0, 0, 0),  # 0=background
 
 batch_size = 10
 H, W = 512, 512
-num_classes = 22  # including background and the boundary pixels
+num_classes = 21
 _DEPTH = 3
 
 
