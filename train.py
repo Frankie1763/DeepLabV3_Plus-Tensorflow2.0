@@ -199,7 +199,6 @@ def weightedLoss(originalLossFunc, weightsList):  # function to set weights on l
 
     return lossFunc
 
-# subclass SparseCategoricalCrossentropy to set the weight of class 22 as 0
 class MyWeightedLoss(tf.keras.losses.SparseCategoricalCrossentropy):
     def call(self, y_true, y_pred, sample_weight=None):
         y_true_flat = tf.reshape(y_true, [-1, ])
@@ -223,7 +222,7 @@ class MyMeanIOU(tf.keras.metrics.MeanIoU):
         y_pred = tf.argmax(y_pred, axis=-1)
         y_pred_flat = tf.reshape(y_pred, [-1, ])
         valid_preds = tf.dynamic_partition(y_pred_flat, valid_indices, num_partitions=2)[1]
-        return super().update_state(valid_labels, valid_preds, sample_weight)
+        return super().update_state(valid_labels, valid_preds)
 
 
 def define_model(backbone, H, W, num_classes, momentum=0.9997, epsilon=1e-5, learning_rate=1e-2, decay=1e-6):

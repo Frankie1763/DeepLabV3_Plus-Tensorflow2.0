@@ -176,7 +176,7 @@ def pixel_accuracy(pred, gt):
 
 def main():
     FLAGS, unparsed = parser.parse_known_args()
-    model = load_model(FLAGS.model)
+    model = load_model(FLAGS.model,FLAGS.backbone)
     img_lst, msk_lst = create_list(FLAGS.img_txt, FLAGS.msk_txt)
     inference(img_lst, msk_lst, model, FLAGS.output)
 
