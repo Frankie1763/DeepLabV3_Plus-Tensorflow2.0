@@ -1,208 +1,125 @@
 import tensorflow as tf
-import numpy as np
-import argparse
+# import argparse
 from tensorflow.keras.callbacks import TensorBoard, ModelCheckpoint
-from tensorflow.python.autograph.core import ag_ctx
-from tensorflow.python.autograph.impl import api as autograph
-from tensorflow.python.keras import backend as K
-from tensorflow.python.keras.utils import losses_utils
-from tensorflow.python.keras.utils import tf_utils
+from flags import *
+from utils import preprocessing
+import os
 
 print('TensorFlow', tf.__version__)
 
-parser = argparse.ArgumentParser()
 
-parser.add_argument('--txt_dir', type=str,
-                    default='/content/drive/My Drive/CS Internship/DeepLab_v3/deeplab_v3_tensorflow_v1/dataset/',
-                    help='directory that contains the train, val txt files.')
-parser.add_argument('--ckpt_dir', type=str,
-                    default="/content/drive/My Drive/CS Internship/DeepLab_v3/deeplab_v3_plus_tensorflow_v2"
-                            "/checkpoints/training_1/cp-{epoch:04d}.ckpt",
-                    help='directory that saves checkpoints.')
-parser.add_argument('--tensorboard_dir', type=str,
-                    default='/content/drive/My Drive/CS Internship/DeepLab_v3/deeplab_v3_plus_tensorflow_v2/logs/logs_new/',
-                    help='directory that saves tensorboard logs.')
-parser.add_argument('--restore', type=str,
-                    default=None,
-                    help='path of the checkpoint you want to restore.')
-parser.add_argument('--epoch', type=int,
-                    default=300,
-                    help='number of epochs to train.')
-parser.add_argument('--saving_interval', type=int,
-                    default=5,
-                    help='save every x epochs.')
-parser.add_argument('--m', type=float,
-                    default=0.9,
-                    help='training momentum.')
-parser.add_argument('--e', type=float,
-                    default=1e-5,
-                    help='training epsilon.')
-parser.add_argument('--lr', type=float,
-                    default=1e-4,
-                    help='learning rate.')
-parser.add_argument('--decay', type=float,
-                    default=1e-6,
-                    help='decay.')
-parser.add_argument('--starting_epoch', type=int,
-                    default=1,
-                    help='starting_epoch.')
-parser.add_argument('--backbone', type=str,
-                    default="resnet50",
-                    help='resnet50/resnet101/xception/resnet50_duc')
+# parser = argparse.ArgumentParser()
 
-# Global variables
-batch_size = 7
-H, W = 512, 512
-num_classes = 21
-_DEPTH = 3
+# parser.add_argument('--restore', type=str,
+#                     default=None,
+#                     help='path of the checkpoint you want to restore.')
 
-
-# class_weights = [0.07, 1.68, 1.99, 1.48, 2.19, 1.48, 2.57, 0.93, 1.06, 0.88, 3.53, 1.74, 0.89, \
-#                  2.28, 2.09, 0.13, 1.96, 3.36, 1.62, 2.04, 1.86, 0]  # ignore the 22nd class
-# class_weights = [1]*21 + [0]
-# class_weight = {0:1., 1:1., 2:1., 3:1., 4:1., 5:1., 6:1., 7:1., 8:1., 9:1., 10:1., 11:1., 12:1., 13:1., 14:1., 15:1., 16:1., 17:1., 18:1., 19:1., 20:1., 21:0.}
-def make_list_from_txt(txt_dir):
-    """"txt_dir: directory that contains the train, val txt files.
-        return: lists of file paths of train/val image data."""
-    f = open(txt_dir + 'train_img_full_path.txt', 'r')
-    train_img_list = [line[:-1] for line in f.readlines()]
-    f.close()
-
-    f = open(txt_dir + 'train_msk_full_path.txt', 'r')
-    train_msk_list = [line[:-1] for line in f.readlines()]
-    f.close()
-
-    f = open(txt_dir + 'val_img_full_path.txt', 'r')
-    val_img_list = [line[:-1] for line in f.readlines()]
-    f.close()
-
-    f = open(txt_dir + 'val_msk_full_path.txt', 'r')
-    val_msk_list = [line[:-1] for line in f.readlines()]
-    f.close()
-
-    assert len(train_img_list) == len(train_msk_list) and len(val_img_list) == len(val_msk_list)
-    return train_img_list, train_msk_list, val_img_list, val_msk_list
-
-
-def get_image(image_path, img_height=800, img_width=1600, mask=False, flip=0):
-    img = tf.io.read_file(image_path)
-    if not mask:
-        img = tf.cast(tf.image.decode_png(img, channels=3), dtype=tf.float32)
-        img = tf.image.resize(images=img, size=[img_height, img_width])
-        img = tf.image.random_brightness(img, max_delta=50.)
-        img = tf.image.random_saturation(img, lower=0.5, upper=1.5)
-        img = tf.image.random_hue(img, max_delta=0.2)
-        img = tf.image.random_contrast(img, lower=0.5, upper=1.5)
-        img = tf.clip_by_value(img, 0, 255)
-        img = tf.case([
-            (tf.greater(flip, 0), lambda: tf.image.flip_left_right(img))
-        ], default=lambda: img)
-        img = img[:, :, ::-1] - tf.constant([103.939, 116.779, 123.68])
+def get_filenames(is_training, data_dir):
+    """Return a list of filenames.
+    Args:
+	is_training: A boolean denoting whether the input is for training.
+	data_dir: path to the the directory containing the input data.
+	Returns:
+	A list of file names.
+    """
+    if is_training:
+        return [os.path.join(data_dir, 'voc_train.record')]
     else:
-        img = tf.image.decode_png(img, channels=1)
-        img = tf.cast(tf.image.resize(images=img, size=[
-            img_height, img_width]), dtype=tf.uint8)
-        img = tf.case([
-            (tf.greater(flip, 0), lambda: tf.image.flip_left_right(img))
-        ], default=lambda: img)
-    return img
+        return [os.path.join(data_dir, 'voc_val.record')]
 
 
-def random_crop(image, mask, H=512, W=512):
-    image_dims = image.shape
-    offset_h = tf.random.uniform(
-        shape=(1,), maxval=image_dims[0] - H, dtype=tf.int32)[0]
-    offset_w = tf.random.uniform(
-        shape=(1,), maxval=image_dims[1] - W, dtype=tf.int32)[0]
+def parse_record(raw_record):
+    """Parse PASCAL image and label from a tf record."""
+    keys_to_features = {
+        'image/height':
+            tf.io.FixedLenFeature((), tf.int64),
+        'image/width':
+            tf.io.FixedLenFeature((), tf.int64),
+        'image/encoded':
+            tf.io.FixedLenFeature((), tf.string, default_value=''),
+        'image/format':
+            tf.io.FixedLenFeature((), tf.string, default_value='jpeg'),
+        'label/encoded':
+            tf.io.FixedLenFeature((), tf.string, default_value=''),
+        'label/format':
+            tf.io.FixedLenFeature((), tf.string, default_value='png'),
+    }
 
-    image = tf.image.crop_to_bounding_box(image,
-                                          offset_height=offset_h,
-                                          offset_width=offset_w,
-                                          target_height=H,
-                                          target_width=W)
-    mask = tf.image.crop_to_bounding_box(mask,
-                                         offset_height=offset_h,
-                                         offset_width=offset_w,
-                                         target_height=H,
-                                         target_width=W)
-    return image, mask
+    parsed = tf.io.parse_single_example(raw_record, keys_to_features)
 
+    # height = tf.cast(parsed['image/height'], tf.int32)
+    # width = tf.cast(parsed['image/width'], tf.int32)
 
-def load_data(image_path, mask_path, H=512, W=512):
-    flip = tf.random.uniform(
-        shape=[1, ], minval=0, maxval=2, dtype=tf.int32)[0]
-    image, mask = get_image(image_path, flip=flip), get_image(
-        mask_path, mask=True, flip=flip)
-    image, mask = random_crop(image, mask, H=H, W=W)
-    return image, mask
+    image = tf.image.decode_image(tf.reshape(parsed['image/encoded'], shape=[]), DEPTH)
+    image = tf.cast(tf.image.convert_image_dtype(image, dtype=tf.uint8), tf.float32)
+    image.set_shape([None, None, 3])
 
+    label = tf.image.decode_image(tf.reshape(parsed['label/encoded'], shape=[]), 1)
+    label = tf.cast(tf.image.convert_image_dtype(label, dtype=tf.uint8), tf.int32)
+    label.set_shape([None, None, 1])
 
-def make_dataset(train_img_list, train_msk_list, val_img_list, val_msk_list):
-    train_dataset = tf.data.Dataset.from_tensor_slices((train_img_list, train_msk_list))
-    train_dataset = train_dataset.shuffle(buffer_size=128)
-    train_dataset = train_dataset.apply(
-        tf.data.experimental.map_and_batch(map_func=load_data,
-                                           batch_size=batch_size,
-                                           num_parallel_calls=tf.data.experimental.AUTOTUNE,
-                                           drop_remainder=True))
-    train_dataset = train_dataset.repeat()
-    train_dataset = train_dataset.prefetch(tf.data.experimental.AUTOTUNE)
-
-    val_dataset = tf.data.Dataset.from_tensor_slices((val_img_list,
-                                                      val_msk_list))
-    val_dataset = val_dataset.apply(
-        tf.data.experimental.map_and_batch(map_func=load_data,
-                                           batch_size=batch_size,
-                                           num_parallel_calls=tf.data.experimental.AUTOTUNE,
-                                           drop_remainder=True))
-    val_dataset = val_dataset.repeat()
-    val_dataset = val_dataset.prefetch(tf.data.experimental.AUTOTUNE)
-
-    return train_dataset, val_dataset
+    return image, label
 
 
-def weightedLoss(originalLossFunc, weightsList):  # function to set weights on loss function
-    def lossFunc(true, pred):
-        axis = -1  # if channels last
-        # axis=  1 #if channels first
+def preprocess_image(image, label, is_training):
+    """Preprocess a single image of layout [height, width, depth]."""
+    if is_training:
+        # Randomly scale the image and label.
+        image, label = preprocessing.random_rescale_image_and_label(image, label, MIN_SCALE, MAX_SCALE)
 
-        # argmax returns the index of the element with the greatest value
-        # done in the class axis, it returns the class index
-        # if your loss is sparse, use only true as classSelectors
-        classSelectors = tf.keras.backend.argmax(true, axis=axis)
+        # Randomly crop or pad a [_HEIGHT, _WIDTH] section of the image and label.
+        image, label = preprocessing.random_crop_or_pad_image_and_label(image, label, HEIGHT, WIDTH, IGNORE_LABEL)
 
-        # considering weights are ordered by class, for each class
-        # true(1) if the class index is equal to the weight index
-        classSelectors = [tf.keras.backend.equal(tf.cast(i, tf.int64), tf.cast(classSelectors, tf.int64)) for i in
-                          range(len(weightsList))]
+        # Randomly flip the image and label horizontally.
+        image, label = preprocessing.random_flip_left_right_image_and_label(image, label)
 
-        # casting boolean to float for calculations
-        # each tensor in the list contains 1 where ground true class is equal to its index
-        # if you sum all these, you will get a tensor full of ones.
-        classSelectors = [tf.keras.backend.cast(x, tf.int64) for x in classSelectors]
+        image.set_shape([HEIGHT, WIDTH, 3])
+        label.set_shape([HEIGHT, WIDTH, 1])
 
-        # for each of the selections above, multiply their respective weight
-        weights = [tf.cast(sel, tf.float32) * tf.cast(w, tf.float32) for sel, w in zip(classSelectors, weightsList)]
+    image = preprocessing.mean_image_subtraction(image)
 
-        # sums all the selections
-        # result is a tensor with the respective weight for each element in predictions
-        weightMultiplier = weights[0]
-        for i in range(1, len(weights)):
-            weightMultiplier = weightMultiplier + weights[i]
+    return image, label
 
-        # make sure your originalLossFunc only collapses the class axis
-        # you need the other axes intact to multiply the weights tensor
-        loss = originalLossFunc(true, pred)
-        loss = tf.cast(loss, tf.float32) * tf.cast(weightMultiplier, tf.float32)
 
-        return loss
+def input_fn(is_training, data_dir, batch_size, num_epochs=1):
+    """Input_fn using the tf.data input pipeline for CIFAR-10 dataset.
+    Args:
+        is_training: A boolean denoting whether the input is for training.
+        data_dir: The directory containing the input data.
+        batch_size: The number of samples per batch.
+        num_epochs: The number of epochs to repeat the dataset.
 
-    return lossFunc
+    Returns:
+        A tuple of images and labels.
+    """
+    dataset = tf.data.Dataset.from_tensor_slices(get_filenames(is_training, data_dir))
+    dataset = dataset.flat_map(tf.data.TFRecordDataset)  # flat_map make sure: order of the dataset stays the same
+
+    if is_training:
+        # choose shuffle buffer sizes, larger sizes result in better randomness, smaller sizes have better performance.
+        # Pascal is a relatively small dataset, we choose to shuffle the full epoch.
+        dataset = dataset.shuffle(buffer_size=NUM_IMAGES['train'])
+
+    dataset = dataset.map(parse_record)
+    dataset = dataset.map(lambda image, label: preprocess_image(image, label, is_training))
+    dataset = dataset.prefetch(batch_size)
+
+    # We call repeat after shuffling, rather than before, to prevent separate
+    # epochs from blending together.
+    dataset = dataset.repeat(num_epochs)
+    dataset = dataset.batch(batch_size)
+
+    # iterator = dataset.make_initializable_iterator() # dataset.make_one_shot_iterator()
+    # images, labels = iterator.get_next()
+    # iterator_init_op = iterator.initializer
+
+    return dataset
+
 
 class MyWeightedLoss(tf.keras.losses.SparseCategoricalCrossentropy):
     def call(self, y_true, y_pred, sample_weight=None):
         y_true_flat = tf.reshape(y_true, [-1, ])
-        valid_indices = tf.compat.v1.to_int32(y_true_flat <= num_classes-1)
+        valid_indices = tf.cast(y_true_flat <= num_classes - 1, tf.int32)
         valid_labels = tf.dynamic_partition(y_true_flat, valid_indices, num_partitions=2)[1]
 
         # get valid logits
@@ -262,27 +179,26 @@ def define_callbacks(tb_logs_path, checkpoint_path, saving_interval=2):
 
 
 def main():
-    FLAGS, unparsed = parser.parse_known_args()
-    train_img_list, train_msk_list, val_img_list, val_msk_list = make_list_from_txt(FLAGS.txt_dir)
-    print("Successfully made data lists!")
-    train_dataset, val_dataset = make_dataset(train_img_list, train_msk_list, val_img_list, val_msk_list)
-    print("Successfully made dataset!")
-    momentum, epsilon, learning_rate, decay = FLAGS.m, FLAGS.e, FLAGS.lr, FLAGS.decay
-    model = define_model(FLAGS.backbone, H, W, num_classes, momentum, epsilon, learning_rate, decay)
+    os.environ['TF_ENABLE_WINOGRAD_NONFUSED'] = '1'
+    train_dataset = input_fn(True, FLAGS['data_dir'], FLAGS['batch_size'], FLAGS['train_epochs'])
+    val_dataset = input_fn(False, FLAGS['data_dir'], 1, num_epochs=1)
+
+    momentum, epsilon, learning_rate, decay = FLAGS['momentum'], FLAGS['epsilon'], FLAGS['lr'], FLAGS['decay']
+    model = define_model(FLAGS['backbone'], HEIGHT, WIDTH, num_classes, momentum, epsilon, learning_rate, decay)
     print("Successfully defined the model!")
-    callbacks = define_callbacks(FLAGS.tensorboard_dir, FLAGS.ckpt_dir, FLAGS.saving_interval)
-    if FLAGS.restore:  # the restore flag is not None
+    callbacks = define_callbacks(FLAGS['tb_dir'], FLAGS['model_dir'], FLAGS['saving_interval'])
+    if FLAGS['restore']:  # the restore flag is not None
         print("Restore training weights...")
-        model.load_weights(FLAGS.restore)
+        model.load_weights(FLAGS['restore'])
 
     print("Start training...")
-    starting_epoch = FLAGS.starting_epoch
+    starting_epoch = FLAGS['starting_epoch']
     model.fit(train_dataset,
-              steps_per_epoch=len(train_img_list) // batch_size,
-              epochs=FLAGS.epoch,
+              steps_per_epoch=NUM_IMAGES['train'] // FLAGS['batch_size'],
+              epochs=FLAGS['train_epochs'],
               verbose=1,
               validation_data=val_dataset,
-              validation_steps=len(val_img_list) // batch_size,
+              validation_steps=NUM_IMAGES['val'] // FLAGS['batch_size'],
               initial_epoch=starting_epoch,
               callbacks=callbacks)
 
