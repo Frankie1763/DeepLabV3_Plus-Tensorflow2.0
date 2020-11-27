@@ -65,11 +65,11 @@ def DeepLabV3Plus(img_height, img_width, nclasses=21):
     print('*** Building DeepLabv3Plus Network ***')
 
     base_model = ResNet101(input_shape=(
-        img_height, img_width, 3), weights='imagenet', include_top=False)
+        img_height, img_width, 3), weights='../ini_checkpoints/resnet101.h5', include_top=False)
     
-    image_features = base_model.get_layer('conv4_block23_out').output  # size = 32*32*1024
+    image_features = base_model.get_layer('conv4_block7_out').output  # size = 32*32*1024
     x_a = ASPP(image_features)
-    x_a = Upsample(tensor=x_a, size=[img_height // 4, img_width // 4])
+    x_a = Upsample(tensor=x_a, size=[img_height//4 + 1, img_width//4 + 1])
 
     x_b = base_model.get_layer('conv2_block3_out').output  # size = 128*128*256
     x_b = Conv2D(filters=48, kernel_size=1, padding='same',

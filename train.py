@@ -7,7 +7,11 @@ import os
 
 print('TensorFlow', tf.__version__)
 
+print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
+config = tf.compat.v1.ConfigProto(allow_soft_placement=True)
 
+config.gpu_options.per_process_gpu_memory_fraction = 0.3
+tf.compat.v1.keras.backend.set_session(tf.compat.v1.Session(config=config))
 # parser = argparse.ArgumentParser()
 
 # parser.add_argument('--restore', type=str,
